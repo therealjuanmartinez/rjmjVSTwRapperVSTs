@@ -19,7 +19,7 @@ In order for a VST from rjmvst to be actually hosted in a DAW, a directory will 
 
 3. JVST Wrapper Jar File (build from jvst_wrapper project)
 
-4. JVST System Jar File (build from jvst_wrapper project)
+4. JVST System Jar File (build from jvst_system project)
 
 5. rjmvst.jar (or your own custom .jar file containing your VST logic)
 
