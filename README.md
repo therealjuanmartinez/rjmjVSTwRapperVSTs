@@ -4,7 +4,7 @@ The main goal behind this project is to build VSTs that primarily focus on MIDI 
 
 As of this writing there is NO GUI for any VST that I have authored but I hope to begin some work in this area as well.
 
-This project uses the available java-based jVSTwRapper libraries (jvstwrapper.sourceforge.net).  As of this writing I have included in this repository only the JAVA-BASED jVSTwRapper projects required to run the sample midi VSTs in rjmvst.  
+This project uses the available java-based jVSTwRapper libraries (http://jvstwrapper.sourceforge.net).  As of this writing I have included in this repository only the JAVA-BASED jVSTwRapper projects required to run the sample midi VSTs that are unique to this repository.  
 
 
 In order for a VST from rjmvst to be actually hosted in a DAW, a directory will be needed containing the following:
@@ -25,6 +25,7 @@ In order for a VST from rjmvst to be actually hosted in a DAW, a directory will 
 
 
 In addition you'll need to make sure you have a Java JVM setup.   More info available at http://jvstwrapper.sourceforge.net/
+Official Location of jVSTwRapper source: http://jvstwrapper.cvs.sourceforge.net/viewvc/jvstwrapper/
   
 
 
