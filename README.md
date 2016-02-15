@@ -13,6 +13,7 @@ In order for a VST from rjmvst to be actually hosted in a DAW, a directory will 
    - This works great with jBridge also (definitely in Windows for MIDI at least) if a 64bit DLL is needed (https://jstuff.wordpress.com/jbridge)
    - This dll is the VST DLL loaded by the DAW
 
+
 2. INI file (must match DLL name except for extension) and a sample of this is in this repository under /misc
 
 3. JVST Wrapper Jar File (build from jvst_wrapper project)
