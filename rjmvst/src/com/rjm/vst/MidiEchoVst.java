@@ -1,6 +1,6 @@
 //Adapted from https://github.com/thbar/opaz-plugdk/blob/master/plugins/Stuff/MIDIVSTPluginSkeleton.java    
 
-//As the name suggests, this is a basic skeleton MIDI VST that echos all midi data from standard VST midi in to standard VST midi out
+//This is an example "hello world" midi VST that only echoes incoming MIDI data
 
 package com.rjm.vst;
 
@@ -22,7 +22,7 @@ import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
 
-public class RjmMidiEchoVst extends VSTPluginAdapter{
+public class MidiEchoVst extends VSTPluginAdapter{
 
 
     //cached instances --> avoid GC --> GOOD!
@@ -39,7 +39,7 @@ public class RjmMidiEchoVst extends VSTPluginAdapter{
     private float[][] programs = new float[][] { { 0.0f } };
     private int currentProgram = 0;
 
-    public RjmMidiEchoVst(long wrapper) {
+    public MidiEchoVst(long wrapper) {
 	super(wrapper);
 
 	currentProgram = 0;
@@ -180,11 +180,12 @@ public class RjmMidiEchoVst extends VSTPluginAdapter{
     // process MIDI
     public int processEvents(VSTEvents ev) {
 
-	// TODO: midi impl. here
-	// for now, all incoming MIDI is echoed.  Also code has been added below to log various MIDI information if logging is enabled 
+	// for now, all incoming MIDI is echoed using the line below.  
 	this.sendVstEventsToHost(ev); //simply echo all incoming events
 
-	//Now just doing logging for debug purposes mainly
+
+	//Now just doing logging for debug purposes mainly (this logging can degrade performance)
+	//Logging via the "out()" function, which itself is a hack, is enabled/disabled in the out() function code itself.
 
 	for (int i = 0; i < ev.getEvents().length; i++)
 	{
@@ -223,11 +224,10 @@ public class RjmMidiEchoVst extends VSTPluginAdapter{
                     int mod = f.getModifiers();
                     if (Modifier.isStatic(mod) && Modifier.isPublic(mod) && Modifier.isFinal(mod)) {
                         try {
-                            //System.out.printf("%s = %d%n", f.getName(), f.get(null));
                             Integer code = (Integer)f.get(null);
                             if (status == code.intValue())
                             {
-                                //Print the type of message we've received
+                                //Print the type of MIDI message we've received along with the status value for it
                                 out(String.format("%s = %d", f.getName(), f.get(null)));
                             }
                         } catch (IllegalAccessException e2) {

@@ -1,6 +1,5 @@
 //Adapted from https://github.com/thbar/opaz-plugdk/blob/master/plugins/Stuff/MIDIVSTPluginSkeleton.java    
 
-//As the name suggests, this is a basic skeleton MIDI VST that echos all midi data from standard VST midi in to standard VST midi out
 
 package com.rjm.vst;
 
