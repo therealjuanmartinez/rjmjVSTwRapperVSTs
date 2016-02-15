@@ -10,8 +10,9 @@ This project uses the available java-based jVSTwRapper libraries (jvstwrapper.so
 In order for a VST from rjmvst to be actually hosted in a DAW, a directory will be needed containing the following:
 
 1. JVST Wrapper DLL (or MAC/Linux library).  This can be sourced from https://sourceforge.net/projects/jvstwrapper/files/ or built from the native C++ project hosted here: http://jvstwrapper.cvs.sourceforge.net/viewvc/jvstwrapper/jvst_native/  
+   - This is the VST DLL loaded by the DAW
    - This works great with jBridge also (definitely in Windows for MIDI at least) if a 64bit DLL is needed (https://jstuff.wordpress.com/jbridge)
-   - This dll is the VST DLL loaded by the DAW
+   
 
 
 2. INI file (must match DLL name except for extension) and a sample of this is in this repository under /misc
