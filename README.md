@@ -28,5 +28,7 @@ In addition you'll need to make sure you have a Java JVM setup.   More info avai
 Official Location of jVSTwRapper source: http://jvstwrapper.cvs.sourceforge.net/viewvc/jvstwrapper/
   
 
+On a side note, I'd like to make a huge shout-out to the creator of VstBoard (http://vstboard.blogspot.com/) as it has proved to be a fantastc VST Host chainer that works great with these VSTs.  More info on that journey here: https://github.com/JesperGoor/LaunchSequencer/issues/1
+
 
 
