@@ -1,5 +1,8 @@
-//Adapted from https://github.com/thbar/opaz-plugdk/blob/master/plugins/Stuff/MIDIVSTPluginSkeleton.java    
+//As of this writing this class IS working but it is in the early stages.  
 
+//The key feature of this class is the function called convertPolyAftertouchAndChannelPressureToCCAndTrashOtherData
+
+//Adapted from https://github.com/thbar/opaz-plugdk/blob/master/plugins/Stuff/MIDIVSTPluginSkeleton.java    
 
 package com.rjm.vst;
 
