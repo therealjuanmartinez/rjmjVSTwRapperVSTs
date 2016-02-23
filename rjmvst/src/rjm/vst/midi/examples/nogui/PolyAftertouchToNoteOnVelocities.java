@@ -5,40 +5,25 @@
 //As of this writing everything is hard-coded... need to pull into a UI or something similar....
 
 
+package rjm.vst.midi.examples.nogui;
 
-
-
-package com.rjm.vst;
-
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
-import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
-
-import com.rjm.midi.MidiUtils;
-import com.rjm.midi.Note;
 
 import jvst.wrapper.VSTPluginAdapter;
 import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
+import rjm.midi.tools.MidiUtils;
+import rjm.midi.tools.Note;
+import rjm.vst.tools.VstUtils;
 
-public class MidiPolyAftertouchToNoteOnVelocities extends VSTPluginAdapter{
+public class PolyAftertouchToNoteOnVelocities extends VSTPluginAdapter{
 
-
-    //cached instances --> avoid GC --> GOOD!
     VSTMidiEvent vme = new VSTMidiEvent();
     VSTEvents ves = new VSTEvents();
-
 
     public static int NUM_PARAMS = 1;
     public static String[] PARAM_NAMES = new String[] { "MIDI CC Value" };
@@ -49,15 +34,12 @@ public class MidiPolyAftertouchToNoteOnVelocities extends VSTPluginAdapter{
     private float[][] programs = new float[][] { { 0.0f } };
     private int currentProgram = 0;
     
-    private int currentVelocity;
-    
     private List<Note> onNotes;
 
-    public MidiPolyAftertouchToNoteOnVelocities(long wrapper) {
+    public PolyAftertouchToNoteOnVelocities(long wrapper) {
 	super(wrapper);
 
 	currentProgram = 0;
-	currentVelocity = 0;
 	
 	onNotes = new ArrayList<Note>();
 
@@ -70,8 +52,8 @@ public class MidiPolyAftertouchToNoteOnVelocities extends VSTPluginAdapter{
 
 	log("Construktor INVOKED!");
 
-	out("LOADING MIDI TO CC PLUGIN");
-	out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
+	VstUtils.out("LOADING MIDI TO CC PLUGIN");
+	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
     }
 
     public void resume() {
@@ -232,7 +214,6 @@ OK so also, the "status" int isn't consistent between channel changes...
     
     private int getCurrentVelocity(int noteNumber)
     {
-	boolean foundMatch = false;
 	int vel = -1;
 	for (int i = 0; i < onNotes.size(); i++)
 	{
@@ -247,7 +228,6 @@ OK so also, the "status" int isn't consistent between channel changes...
     private void removeNoteFromVelocityArray(Note n)
     {
 	boolean done = false;
-	boolean foundMatch = false;
 	int removeIndex = -1;
 	
 	while (!done)
@@ -284,33 +264,22 @@ OK so also, the "status" int isn't consistent between channel changes...
 		byte[] msg_data = ((VSTMidiEvent)e).getData();
 
 		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = ( msg_data[ 0 ] & 0xF0 ) >> 4;
+                msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
 		if( msg_status == 0xF ) {
 		    /* Ignore system messages.*/
 		    //return;
 		}
-		msg_channel = ( msg_data[ 0 ] & 0xF ) + 1;
+		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
+		ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
+		ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 
-		ctrl_index = msg_data[ 1 ] & 0x7F;
-		ctrl_value = msg_data[ 2 ] & 0x7F;
-
-		/* switch msg_status
-                                    case 0x8: /* Note off.*/
-		//case 0x9: /* Note on.*/
-		//case 0xB: /* Control change.*/
-		//case 0xC: /* Program change.*/
-		//case 0xE: /* Pitch wheel.*/
-
-		int status = (int) (e.getData()[0] & 0xFF) - msg_channel + 1; //different but related to msg_status
-
-		out("Status for incoming message is " + status);
+		VstUtils.out("Status for incoming message is " + status);
 		//out("Channel is supposedly " + msg_channel);
 
 		if (msg_channel == inputChannelForPressureAftertouch)
 		{
 		    //out("Channel is correct at " + inputChannel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE + " or a " + ShortMessage.CONTROL_CHANGE);
-		    
-		    boolean foundPressureOrAftertouch = false;
 		    
 		    if ((status == ShortMessage.NOTE_OFF)||(status == ShortMessage.NOTE_ON)) 
 		    {
@@ -331,12 +300,11 @@ OK so also, the "status" int isn't consistent between channel changes...
 			//ctrl_value = ctrl_value;
 			//ctrl_index = cc;
 			status = ShortMessage.CONTROL_CHANGE;
-			out("Found poly value " + ctrl_value);
-			foundPressureOrAftertouch = true;
+			VstUtils.out("Found poly value " + ctrl_value);
 
 			if ((minOutputVel > 0) || (maxOutputVel < 127))
 			{
-                                ctrl_value = MidiUtils.getScaledValue(ctrl_value, maxOutputVel, minOutputVel);
+                                ctrl_value = MidiUtils.getScaledMidiValue(ctrl_value, maxOutputVel, minOutputVel);
 			}
 			updateVelocityArray(new Note(noteNumber, pressure)); //That's right, putting "pressure" as the Note's velocity
 		    }
@@ -359,7 +327,7 @@ OK so also, the "status" int isn't consistent between channel changes...
 			    {
 				velocity = 80; //TODO find better non-hardcoded method
 			    }
-			    out("Velocity is " + velocity);
+			    VstUtils.out("Velocity is " + velocity);
 			    ShortMessage s = new ShortMessage(ShortMessage.NOTE_ON,  outputChannel - 1, noteNumber, velocity);
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
 			    VSTMidiEvent newEvent = new VSTMidiEvent();
@@ -382,7 +350,7 @@ OK so also, the "status" int isn't consistent between channel changes...
 	//out("outputEvents has " + outputEvents.size() + " elements");
 	
 	//Convert output to VSTEvents Object (would have used VSTEvents before now, but it doesn't support the adding of events one by one)
-	return Utils.convertToVSTEvents(outputEvents);
+	return VstUtils.convertToVSTEvents(outputEvents);
     }
     
    
@@ -396,9 +364,9 @@ OK so also, the "status" int isn't consistent between channel changes...
 	VSTEvents newEvents = new VSTEvents();
 	if (ev.getNumEvents() > 0)
 	{
-	    out("\n\n********************** Starting aftertouch/velocity logic");
-	    out("BEFORE:");
-	    try{ outputVstMidiEventsForDebug(ev);} catch (Exception e ){}
+	    VstUtils.out("\n\n********************** Starting aftertouch/velocity logic");
+	    VstUtils.out("BEFORE:");
+	    try{ VstUtils.outputVstMidiEventsForDebugPurposes(ev);} catch (Exception e ){}
 	    try
 	    {
 		newEvents = applyPolyAftertouchToNoteOnVelocities(ev, 2, 1, 127,0);
@@ -407,13 +375,13 @@ OK so also, the "status" int isn't consistent between channel changes...
 		// TODO Auto-generated catch block
 		e.printStackTrace();
 	    }//11
-	    out("\nAFTER (there are " + newEvents.getNumEvents() + " Events:");
+	    VstUtils.out("\nAFTER (there are " + newEvents.getNumEvents() + " Events:");
 
-	    try{ outputVstMidiEventsForDebug(newEvents);} catch (Exception e ){}
+	    try{ VstUtils.outputVstMidiEventsForDebugPurposes(newEvents);} catch (Exception e ){}
 
-	    out("NOW SENDING EVENTS FROM Sonar AFTER LIST");
+	    VstUtils.out("NOW SENDING EVENTS FROM Sonar AFTER LIST");
 	    this.sendVstEventsToHost(newEvents); 
-	    out("*******END***********");
+	    VstUtils.out("*******END***********");
 	}
 
 
@@ -421,119 +389,9 @@ OK so also, the "status" int isn't consistent between channel changes...
     }
 
 
-    public void outputVstMidiEventsForDebug(VSTEvents ev)
-    {
-	//Now just doing logging for debug purposes mainly
-
-	out("Looks like there are " + ev.getNumEvents() + " events to output here...");
-
-	for (int i = 0; i < ev.getEvents().length; i++)
-	{
-	    VSTEvent e = ev.getEvents()[i];
-
-	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
-	    {
-		byte[] msg_data = ((VSTMidiEvent)e).getData();
-
-		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = ( msg_data[ 0 ] & 0xF0 ) >> 4;
-		if( msg_status == 0xF ) {
-		    /* Ignore system messages.*/
-		    //return;
-		}
-		msg_channel = ( msg_data[ 0 ] & 0xF ) + 1;
-
-		ctrl_index = msg_data[ 1 ] & 0x7F;
-		ctrl_value = msg_data[ 2 ] & 0x7F;
-
-		/*
-	                        case 0x8: /* Note off.*/
-		//case 0x9: /* Note on.*/
-		//case 0xB: /* Control change.*/
-		//case 0xC: /* Program change.*/
-		//case 0xE: /* Pitch wheel.*/
-
-		int status = (int) (e.getData()[0] & 0xFF) - msg_channel + 1; //different but related to msg_status
-
-		out("Status for incoming message is " + status);
-
-		ShortMessage s = new ShortMessage();
-
-		out("\n");
-		Class<ShortMessage> c = ShortMessage.class;
-		for (java.lang.reflect.Field f : c.getDeclaredFields()) {
-		    int mod = f.getModifiers();
-		    if (Modifier.isStatic(mod) && Modifier.isPublic(mod) && Modifier.isFinal(mod)) {
-			try {
-			    //System.out.printf("%s = %d%n", f.getName(), f.get(null));
-			    Integer code = (Integer)f.get(null);
-			    if (status == code.intValue())
-			    {
-				//Print the type of message we've received
-				out(String.format("%s = %d", f.getName(), f.get(null)));
-			    }
-			} catch (IllegalAccessException e2) {
-			    out("ERROR doing the comparison thing");
-			    e2.printStackTrace();
-			}
-		    }
-		}
-		out("Channel: " + msg_channel);
-		out("Status: " + msg_status);
-		out("Value: " + ctrl_value);
-		out("Index: " + ctrl_index);
-	    }
-	    else {out("Not midi?");}
-	}	
-    }
+  
 
 
-
-
-    public void out(String message)
-    {
-
-	//This function as of right now is a total hack and should only be used for debugging purposes and is known to degrade even midi-only/non-sound plugin performance
-
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
-	{ return; }
-
-	try
-	{
-	    //HACK JMM
-	    //TODO remove this thing
-	    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-
-		    new FileOutputStream("c:\\program files\\common files\\vst3\\jwrapper\\jwrapper_log.txt", true), "UTF-8"));
-
-	    try
-	    {
-		writer.write(message + "\n");
-		writer.close();
-	    } catch (IOException e)
-	    {
-		try
-		{
-		    writer.write(message + "\n");
-		    writer.close();
-		} catch (IOException e1)
-		{
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		}
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	    }
-	} catch (UnsupportedEncodingException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	} catch (FileNotFoundException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-    }
 
 }
 

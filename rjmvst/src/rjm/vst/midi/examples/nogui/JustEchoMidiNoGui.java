@@ -2,27 +2,19 @@
 
 //This is an example "hello world" midi VST that only echoes incoming MIDI data
 
-package com.rjm.vst;
+package rjm.vst.midi.examples.nogui;
 
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
 import jvst.wrapper.VSTPluginAdapter;
 import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
+import rjm.midi.tools.MidiUtils;
+import rjm.vst.tools.VstUtils;
 
-public class MidiEchoVst extends VSTPluginAdapter{
+public class JustEchoMidiNoGui extends VSTPluginAdapter{
 
 
     //cached instances --> avoid GC --> GOOD!
@@ -39,7 +31,7 @@ public class MidiEchoVst extends VSTPluginAdapter{
     private float[][] programs = new float[][] { { 0.0f } };
     private int currentProgram = 0;
 
-    public MidiEchoVst(long wrapper) {
+    public JustEchoMidiNoGui(long wrapper) {
 	super(wrapper);
 
 	currentProgram = 0;
@@ -53,8 +45,8 @@ public class MidiEchoVst extends VSTPluginAdapter{
 
 	log("Construktor INVOKED!");
 
-	out("LOADING");
-	out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
+	VstUtils.out("LOADING");
+	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
     }
 
     public void resume() {
@@ -197,28 +189,19 @@ public class MidiEchoVst extends VSTPluginAdapter{
 		byte[] msg_data = ((VSTMidiEvent)e).getData();
 
 		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = ( msg_data[ 0 ] & 0xF0 ) >> 4;
-                if( msg_status == 0xF ) {
-                    /* Ignore system messages.*/
-                    //return;
-                }
-                msg_channel = ( msg_data[ 0 ] & 0xF ) + 1;
-
-                ctrl_index = msg_data[ 1 ] & 0x7F;
-                ctrl_value = msg_data[ 2 ] & 0x7F;
-
-                /*
-                        case 0x8: /* Note off.*/
-                //case 0x9: /* Note on.*/
-                //case 0xB: /* Control change.*/
-                //case 0xC: /* Program change.*/
-                //case 0xE: /* Pitch wheel.*/
-
-                int status = (int) (e.getData()[0] & 0xFF);
+                msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
+		if( msg_status == 0xF ) {
+		    /* Ignore system messages.*/
+		    //return;
+		}
+		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
+		ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
+		ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 
                 ShortMessage s = new ShortMessage();
 
-                out("\n");
+                VstUtils.out("\n");
                 Class<ShortMessage> c = ShortMessage.class;
                 for (java.lang.reflect.Field f : c.getDeclaredFields()) {
                     int mod = f.getModifiers();
@@ -228,18 +211,18 @@ public class MidiEchoVst extends VSTPluginAdapter{
                             if (status == code.intValue())
                             {
                                 //Print the type of MIDI message we've received along with the status value for it
-                                out(String.format("%s = %d", f.getName(), f.get(null)));
+                                VstUtils.out(String.format("%s = %d", f.getName(), f.get(null)));
                             }
                         } catch (IllegalAccessException e2) {
-                            out("ERROR doing the comparison thing");
+                            VstUtils.out("ERROR doing the comparison thing");
                             e2.printStackTrace();
                         }
                     }
                 }
-                out("Channel: " + msg_channel);
-                out("Status: " + msg_status);
-                out("Value: " + ctrl_value);
-                out("Index: " + ctrl_index);
+                VstUtils.out("Channel: " + msg_channel);
+                VstUtils.out("Status: " + msg_status);
+                VstUtils.out("Value: " + ctrl_value);
+                VstUtils.out("Index: " + ctrl_index);
 	    }
 	}
 	return 0;
@@ -247,51 +230,6 @@ public class MidiEchoVst extends VSTPluginAdapter{
 
 
 
-
-    public void out(String message)
-    {
-
-	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
-
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
-	{ return; }
-
-	try
-	{
-	    //HACK JMM
-	    //TODO remove this thing
-	    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-
-		    new FileOutputStream("c:\\program files\\common files\\vst3\\jwrapper\\jwrapper_log.txt", true), "UTF-8"));
-
-	    try
-	    {
-		writer.write(message + "\n");
-		writer.close();
-	    } catch (IOException e)
-	    {
-		try
-		{
-		    writer.write(message + "\n");
-		    writer.close();
-		} catch (IOException e1)
-		{
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		}
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	    }
-	} catch (UnsupportedEncodingException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	} catch (FileNotFoundException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-    }
 
 }
 

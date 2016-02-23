@@ -1,4 +1,6 @@
-package com.rjm.midi;
+package rjm.midi.tools;
+
+//This class was borrowed from another project which is why it has more functionality than is used by any dependent project as of this writing
 
 public class Note implements Comparable{
 
@@ -113,7 +115,7 @@ public class Note implements Comparable{
 		return octave;
 	}
 	
-	public String getNoteNamePlusOctave()
+	public String getNoteNamePlusOctave() //Default to Sharp name vs. Flat name
 	{
 		return getNoteName(true) + getOctave();
 	}
@@ -123,7 +125,7 @@ public class Note implements Comparable{
 		return getNoteName(sharp) + getOctave();
 	}
 	
-	public String getNoteName()
+	public String getNoteName() //Default to Shart naem vs. Flat name
 	{
 		return getNoteName(true);
 	}

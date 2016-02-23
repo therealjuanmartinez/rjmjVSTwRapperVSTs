@@ -1,7 +1,7 @@
 //Adapted from https://github.com/thbar/opaz-plugdk/blob/master/plugins/Stuff/MIDIVSTPluginSkeleton.java    
 
 
-package com.rjm.vst;
+package rjm.vst.midi.examples.nogui;
 
 import java.io.BufferedWriter;
 import java.io.FileNotFoundException;
@@ -21,8 +21,9 @@ import jvst.wrapper.VSTPluginAdapter;
 import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
+import rjm.midi.tools.MidiUtils;
 
-public class MidiPolyPressureToCC extends VSTPluginAdapter{
+public class PolyAftertouchAndChanPressureToCC extends VSTPluginAdapter{
 
 
     //cached instances --> avoid GC --> GOOD!
@@ -39,7 +40,7 @@ public class MidiPolyPressureToCC extends VSTPluginAdapter{
     private float[][] programs = new float[][] { { 0.0f } };
     private int currentProgram = 0;
 
-    public MidiPolyPressureToCC(long wrapper) {
+    public PolyAftertouchAndChanPressureToCC(long wrapper) {
 	super(wrapper);
 
 	currentProgram = 0;
@@ -215,25 +216,15 @@ OK so also, the "status" int isn't consistent between channel changes...
 		byte[] msg_data = ((VSTMidiEvent)e).getData();
 
 		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = ( msg_data[ 0 ] & 0xF0 ) >> 4;
+                msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
 		if( msg_status == 0xF ) {
 		    /* Ignore system messages.*/
 		    //return;
 		}
-		msg_channel = ( msg_data[ 0 ] & 0xF ) + 1;
-
-		ctrl_index = msg_data[ 1 ] & 0x7F;
-		ctrl_value = msg_data[ 2 ] & 0x7F;
-
-		/* switch msg_status
-                                    case 0x8: /* Note off.*/
-		//case 0x9: /* Note on.*/
-		//case 0xB: /* Control change.*/
-		//case 0xC: /* Program change.*/
-		//case 0xE: /* Pitch wheel.*/
-
-
-		int status = (int) (e.getData()[0] & 0xFF) - msg_channel + 1; //different but related to msg_status
+		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
+		ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
+		ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 
 		out("Status for incoming message is " + status);
 		//out("Channel is supposedly " + msg_channel);
