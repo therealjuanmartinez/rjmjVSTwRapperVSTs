@@ -2,7 +2,7 @@
 
 //This is an example "hello world" midi VST that only echoes incoming MIDI data
 
-package rjm.vst.midi.polytool;
+package rjm.vst.midi.examples.gui.swing;
 
 
 
@@ -13,7 +13,7 @@ import jvst.wrapper.VSTPluginAdapter;
 import jvst.wrapper.valueobjects.VSTEvents;
 import rjm.vst.tools.VstUtils;
 
-public class PolyTool extends VSTPluginAdapter{
+public class JustEchoMidi extends VSTPluginAdapter{
 
     public final static int PARAM_ID_VOLUME = 0;
     public final static int PARAM_ID_THRU = 1;
@@ -33,7 +33,7 @@ public class PolyTool extends VSTPluginAdapter{
     private float[][] programs = new float[][] { { 1.0f, 1 } };
     private int currentProgram = 0;
 
-    public PolyTool(long wrapper) {
+    public JustEchoMidi(long wrapper) {
 	super(wrapper);
 	
 	volumeSet = false;
@@ -78,6 +78,23 @@ public class PolyTool extends VSTPluginAdapter{
     }
     
     
+    protected void updateGUI() {
+	//only access gui elemts if the gui was fully initialized
+	//this is to prevent a threading issue on the mac that may cause a npe because the sliders 
+	//arent there yet (the constructor of the plugin is called, when the gui is not initialized yet)
+	//for thread savety on the mac, never call gui stuff in the constructor of the plugin
+	//init the gui defaults always when the gui is loaded, not when the plug is loaded.
+	
+	if (	gui!=null && 
+			gui.VolumeSlider!=null && 
+			gui.VolumeText!=null) {
+	    
+
+	    gui.VolumeSlider.setValue((int)(this.getParameter(PARAM_ID_VOLUME) * 100F));
+	    //out("Updating volume slider to " + (this.getParameter(PARAM_ID_VOLUME) * 100F));
+	    gui.VolumeText.setText(this.getParameterDisplay(PARAM_ID_VOLUME)); 
+	}
+  }
   
 
     public String getProductString() {
@@ -166,10 +183,13 @@ public class PolyTool extends VSTPluginAdapter{
 	    VstUtils.out("Volume set = false");
 	    volumeSet = false;
 	}
+	   
+	updateGUI();
     }
 
     public void setProgram(int index) {
 	currentProgram = index;
+	updateGUI();
     }
 
     public void setProgramName(String name) {
@@ -194,14 +214,14 @@ public class PolyTool extends VSTPluginAdapter{
 	
 	if (!volumeSet)//Inject Volume CC message at the top of the VSTEvents set
 	{
-	    VstUtils.out("Setting volume to " + getParameterMulValue(PolyTool.PARAM_ID_VOLUME));
+	    VstUtils.out("Setting volume to " + getParameterMulValue(JustEchoMidi.PARAM_ID_VOLUME));
                 int channel = 1; //hard coded for demo simplicity
                 int volumeCCNum = 07;  //This is standard MIDI
 		try
 		{
 		    //Create new MIDI message with volume info
 		    //Subtracting 1 from channel on next line since it does 0-15 instead of 1-16
-		    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE, channel - 1, volumeCCNum, getParameterMulValue(PolyTool.PARAM_ID_VOLUME));
+		    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE, channel - 1, volumeCCNum, getParameterMulValue(JustEchoMidi.PARAM_ID_VOLUME));
 		    //Add new message to VSTEvents collection
 		    ev = VstUtils.getVstEventsWithNewVstEventInserted(0, ev, VstUtils.createVstMidiEventFromShortMessage(s));
 		    volumeSet = true;
@@ -214,7 +234,7 @@ public class PolyTool extends VSTPluginAdapter{
 	}
 
 	//Now get Param for whether MIDI THRU is turned on or not
-	float param = this.getParameter(PolyTool.PARAM_ID_THRU) ;
+	float param = this.getParameter(JustEchoMidi.PARAM_ID_THRU) ;
 	//out("CB param is " + param);
 	if (param > 0) //= 'true'
 	{

@@ -1,4 +1,4 @@
-package rjm.vst.midi.examples.gui;
+package rjm.vst.midi.examples.gui.swing;
 
 
 import java.awt.*;
@@ -11,8 +11,7 @@ import javax.swing.event.ChangeListener;
 
 import jvst.wrapper.*;
 import jvst.wrapper.gui.VSTPluginGUIRunner;
-
-import rjm.vst.midi.examples.gui.JustEchoMidi;
+import rjm.vst.midi.examples.gui.swing.JustEchoMidi;
 import rjm.vst.tools.VstUtils;
 
 

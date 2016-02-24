@@ -2,7 +2,7 @@
 
 //This is an example "hello world" midi VST that only echoes incoming MIDI data
 
-package rjm.vst.midi.examples.gui;
+package rjm.vst.midi.examples.gui.javafx;
 
 
 
@@ -18,19 +18,19 @@ public class JustEchoMidi extends VSTPluginAdapter{
     public final static int PARAM_ID_VOLUME = 0;
     public final static int PARAM_ID_THRU = 1;
 
-    public rjm.vst.midi.examples.gui.JustEchoMidiGui gui = null;
+    public rjm.vst.midi.examples.gui.swing.JustEchoMidiGui gui = null;
 
     private boolean volumeSet;
 
     public static int NUM_PARAMS = 1;
 
-    public static String[] PARAM_NAMES = new String[] { "CH1 Output Volume", "Midi Thru"  };
-    public static String[] PARAM_LABELS = new String[] { "VolumeLabel", "EnabledLbl" };
-    public static float[] PARAM_PRINT_MUL = new float[] { 127, 1 };
+    public static String[] PARAM_NAMES = new String[] { "Midi Thru"  };
+    public static String[] PARAM_LABELS = new String[] { "EnabledLbl" };
+    public static float[] PARAM_PRINT_MUL = new float[] { 1 };
     
 
     // Some default programs
-    private float[][] programs = new float[][] { { 1.0f, 1 } };
+    private float[][] programs = new float[][] { { 1, 1.0F } };
     private int currentProgram = 0;
 
     public JustEchoMidi(long wrapper) {
@@ -78,24 +78,7 @@ public class JustEchoMidi extends VSTPluginAdapter{
     }
     
     
-    protected void updateGUI() {
-	//only access gui elemts if the gui was fully initialized
-	//this is to prevent a threading issue on the mac that may cause a npe because the sliders 
-	//arent there yet (the constructor of the plugin is called, when the gui is not initialized yet)
-	//for thread savety on the mac, never call gui stuff in the constructor of the plugin
-	//init the gui defaults always when the gui is loaded, not when the plug is loaded.
-	
-	if (	gui!=null && 
-			gui.VolumeSlider!=null && 
-			gui.VolumeText!=null) {
-	    
-
-	    gui.VolumeSlider.setValue((int)(this.getParameter(PARAM_ID_VOLUME) * 100F));
-	    //out("Updating volume slider to " + (this.getParameter(PARAM_ID_VOLUME) * 100F));
-	    gui.VolumeText.setText(this.getParameterDisplay(PARAM_ID_VOLUME)); 
-	}
-  }
-  
+ 
 
     public String getProductString() {
 	return "product1";
@@ -184,12 +167,12 @@ public class JustEchoMidi extends VSTPluginAdapter{
 	    volumeSet = false;
 	}
 	   
-	updateGUI();
+	//updateGUI();
     }
 
     public void setProgram(int index) {
 	currentProgram = index;
-	updateGUI();
+	//updateGUI();
     }
 
     public void setProgramName(String name) {
@@ -205,7 +188,7 @@ public class JustEchoMidi extends VSTPluginAdapter{
 
     // Generate / Process the sound!
     public void processReplacing(float[][] inputs, float[][] outputs, int sampleFrames) {
-	//DO NOTHING HERE
+	//DO NOTHING HERE since we're doing MIDI not SOUND
     }
 
 
@@ -227,9 +210,7 @@ public class JustEchoMidi extends VSTPluginAdapter{
 		    volumeSet = true;
 		} catch (InvalidMidiDataException e1)
 		{
-		    // TODO Auto-generated catch block
 		    VstUtils.out(e1.getMessage());
-		    e1.printStackTrace();
 		}
 	}
 

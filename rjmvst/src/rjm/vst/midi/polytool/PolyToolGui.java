@@ -1,27 +1,31 @@
 package rjm.vst.midi.polytool;
 
 
-import java.awt.*;
-import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.io.Serializable;
 import java.io.StringWriter;
-import java.io.UnsupportedEncodingException;
 
-import javax.sound.midi.Synthesizer;
 import javax.swing.*;
-import javax.swing.border.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import jvst.wrapper.*;
 import jvst.wrapper.gui.VSTPluginGUIRunner;
-import rjm.vst.midi.examples.gui.JustEchoMidi;
+import rjm.vst.midi.examples.gui.swing.JustEchoMidi;
 import rjm.vst.tools.VstUtils;
+import rjm.vst.javafx.SceneToJComponent;
+import rjm.vst.javafx.UIUtils;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 
 
 public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
@@ -29,29 +33,98 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     JSlider VolumeSlider;
     JTextField VolumeText;
     JCheckBox CbThru;
+    
+    CheckBox cb1;
+    int currYPos = 0;
+    final int rowHeight = 20;
 
-    //private Synthesizer synthesizer;
     private VSTPluginAdapter pPlugin;
+    
+    VBox root;
+    
+    //THIS IS THE HOT AREA RIGHT NOW
+    private Scene createScene() {
+        //Group  root  =  new  Group();
+        this.root  =  new  VBox();
+        Scene  scene  =  new  Scene(root, Color.DARKRED);
+        Text  text  =  new  Text();
+        
+        text.setX(40);
+        text.setY(100);
+        text.setFont(new Font(25));
+        text.setText("Welcome JavaFX!");
+
+        root.getChildren().add(text);
+        
+      //A checkbox without a caption
+        cb1 = new CheckBox();
+        cb1.setText("Enable Midi Thru");
+        cb1.setLayoutX(50);
+        cb1.setLayoutY(115);
+        cb1.setSelected(true);
+        cb1.setId("testcb");
+        
+        //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
+        cb1.setOnAction(e -> this.HandleCheckbox(cb1));
+        
+        root.getChildren().add(cb1);
+
+        return (scene);
+    } 
+    
+    public void HandleCheckbox(CheckBox cb)
+    {
+	//VstUtils.out("Checkbox set to " + jb.isSelected());
+
+	Boolean checked = cb.selectedProperty().get();
+	this.pPlugin.setParameterAutomated(JustEchoMidi.PARAM_ID_THRU, (checked) ? 1 : 0);
+
+	UIUtils.showAlert("ID is " + cb.getId() + " and checked is " + checked.toString());
+	
+	addRow();
+    }
 
     public PolyToolGui( VSTPluginGUIRunner r, VSTPluginAdapter plugin ) throws Exception {
 
 	super( r, plugin );
 	try
 	{
-	    //final MidiEchoVSTWithGui midiEchoVst = ( MidiEchoVSTWithGui ) plugin;
+	    //add
+	    //Jpanel declaration (?)
 
-	    this.setTitle( "PolyTool" );
-	    this.setSize(220,200);
+	    this.setTitle( "Midi Echo VST" );
+	    this.setSize(300, 200);
 
-
-	    //this.setResizable(false);
-	    this.setResizable(true);
-
-	    this.pPlugin = plugin;
-
-	    this.init();
-	    //this.pack();
-
+	    this.rowCount = 0;
+	    
+	    //JFrame frame = new JFrame("Swing and JavaFX");
+	        final JFXPanel fxPanel = new JFXPanel();
+	        fxPanel.setScene(createScene());
+	        this.pPlugin = plugin;
+	        
+	        this.getContentPane().add(fxPanel);
+	        
+	        cb1 = new CheckBox();
+	        cb1.setText("Enable Midi Thru2");
+	        cb1.setLayoutX(50);
+	        cb1.setLayoutY(135);
+	        this.currYPos = 135;
+	        
+	        cb1.setSelected(true);
+	        cb1.setId("testcb");
+	        
+	        //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
+	        cb1.setOnAction(e -> this.HandleCheckbox(cb1)); 
+	        
+                Platform.runLater(new Runnable(){
+		    @Override
+		    public void run()
+		    { root.getChildren().add(cb1); }
+	        });
+	        
+	        //UIUtils.showAlert("Hey so i guess this worked??");
+	        
+	        
 	    if( RUNNING_MAC_X ) this.show();
 	}
 	catch (Exception e)
@@ -60,192 +133,55 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	    PrintWriter pw = new PrintWriter(sw);
 	    e.printStackTrace(pw);
 	    VstUtils.out("ERROR: " + sw.toString()); // stack trace as a string
+	        UIUtils.showAlert("Hey so i guess this NOT worked?? " + sw.toString() );
 	}
 
+    }
+    
+    
+    int rowCount;
+    private void addRow()
+    {
+	int y = currYPos + rowHeight;
+
+	CheckBox cb = new CheckBox();
+	cb.setText("Enable Midi Thru2");
+	cb.setLayoutX(50);
+	cb.setLayoutY(y);
+	cb.setSelected(true);
+	cb.setId("cb_" + rowCount);
+
+	//This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
+	cb.setOnAction(e -> this.HandleCheckbox(cb)); 
+
+	Platform.runLater(new Runnable(){
+	    @Override
+	    public void run()
+	    { root.getChildren().add(cb); }
+	});
+
+	rowCount++;
+	currYPos = y;
     }
 
 
     @Override
     public void stateChanged(ChangeEvent e)
     {
-	try
-	{
-	    if (e.getSource().getClass() == JSlider.class)
-	    {
-		JSlider sl = (JSlider)e.getSource();
-		if (sl == this.VolumeSlider) {
-
-		    //Sets to somewhere between 0.0 to 1.0
-		    VstUtils.out("Setting parameter to " + (float)((float)sl.getValue() / 100F));
-		    this.pPlugin.setParameterAutomated(PolyTool.PARAM_ID_VOLUME, (float)((float)sl.getValue() / 100F));
-
-		    //Sets to somewhere between 0-127
-		    VstUtils.out("Setting volume text to " + this.pPlugin.getParameterDisplay(JustEchoMidi.PARAM_ID_VOLUME));
-		    this.VolumeText.setText(this.pPlugin.getParameterDisplay(JustEchoMidi.PARAM_ID_VOLUME));
-		}
-	    }
-	    if (e.getSource().getClass() == JCheckBox.class)
-	    {
-		//This seems to get triggered on hover-over also....
-		JCheckBox jb = (JCheckBox)e.getSource();
-		VstUtils.out("Checkbox set to " + jb.isSelected());
-
-		if (jb.isSelected() != this.checked) //Make sure it's a true state change
-		{
-		    this.checked = jb.isSelected();
-		    //this.testThingy();
-		    this.addRowToGui();
-		}
-		this.pPlugin.setParameterAutomated(JustEchoMidi.PARAM_ID_THRU, (jb.isSelected()) ? 1 : 0);
-	    }
-
-	} catch (Exception ex)
-	{
-	    StringWriter sw = new StringWriter();
-	    PrintWriter pw = new PrintWriter(sw);
-	    ex.printStackTrace(pw);
-	    VstUtils.out("ERROR: " + sw.toString()); // stack trace as a string
-	}
-
+	//Since we're using JavaFX, we maybe don't ever need to use this function...
+		//but it is still required as it is an inherited abstract method	
     }
 
-    public void doTestSerializiation()
+
+
+
+
+
+    public static void main(String[] args) throws Throwable 
     {
-
-	String string;
-	try
-	{
-	    SomeClass b4 = new SomeClass();
-	    b4.setCustom("This ia custom");
-	    string = VstUtils.toString( b4 );
-	    VstUtils.out(" Encoded serialized version " );
-	    VstUtils.out( string );
-	    SomeClass some = ( SomeClass ) VstUtils.fromString( string );
-	    VstUtils.out( "\n\nReconstituted object");
-	    VstUtils.out( some.toString() );
-	    VstUtils.out( some.getCustom() + " <- that was the custom");
-	} catch (IOException | ClassNotFoundException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-    }
-
-    public boolean checked;
-
-    public void init()
-    {
-	((PolyTool)plugin).gui=this; //tell the plug that it has a gui!
-
-	VstUtils.out("PARAM_ID_VOLUME is " + this.pPlugin.getParameter(JustEchoMidi.PARAM_ID_VOLUME));
-	VstUtils.out("PARAM_ID_VOLUME * 100F is " + this.pPlugin.getParameter(JustEchoMidi.PARAM_ID_VOLUME) * 100F);
-	//this.VolumeSlider = new JSlider(JSlider.VERTICAL, 1, 100, (int)(this.pPlugin.getParameter(MidiEchoVSTWithGui.PARAM_ID_VOLUME) * 100F));
-	this.VolumeSlider = new JSlider(JSlider.VERTICAL, 0, 100, (int)(this.pPlugin.getParameter(JustEchoMidi.PARAM_ID_VOLUME) ));
-	this.VolumeText = new JTextField("0");
-	this.CbThru = new JCheckBox("Midi Thru");
-
-	this.checked = CbThru.isSelected();
-
-	this.VolumeSlider.addChangeListener(this);
-	this.CbThru.addChangeListener(this);
-
-
-	//JLabel VolumeLabel = new JLabel("The Volume");
-	JLabel VolumeLabel = new JLabel(this.pPlugin.getParameterName(JustEchoMidi.PARAM_ID_VOLUME));
-
-	//GridLayout grids = new GridLayout(1, 3);
-
-	GridLayout grids = new GridLayout(2, 2);
-	this.getContentPane().setLayout(grids);
-
-	Box VolumeBox = new Box(BoxLayout.Y_AXIS);
-	//Box FeedbackBox = new Box(BoxLayout.Y_AXIS);
-	//Box DelayBox = new Box(BoxLayout.Y_AXIS);
-
-	VolumeBox.add(VolumeLabel);
-	VolumeBox.add(this.VolumeSlider);
-	VolumeBox.add(this.VolumeText);
-
-	this.getContentPane().add(VolumeBox);
-	this.getContentPane().add(CbThru);
-    }
-
-
-    public void addRowToGui()
-    {
-	Box RowBox = new Box(BoxLayout.X_AXIS);
-
-
-	//  JSlider VolumeSlider;
-	//  JTextField VolumeText;
-	//  JCheckBox CbThru;
-
-	JCheckBox CbOnOff = new JCheckBox("Enabled");
-	CbOnOff.setSelected(true);
-	RowBox.add(CbOnOff);
-
-	//NOT per row need: Input Channel
-
-	//Need
-	//"Learn Button"
-	//On-Off checkbox
-	//Input Note Value
-	//Output CC #
-	//Min/Max
-	//Maybe a color box to show input
-
-	this.getContentPane().add(RowBox);
-
-
-    }
-
-    public void testThingy()
-    {
-	this.getContentPane().getLayout();
-	this.getContentPane().add(new JLabel("TeST"));
-
-	doTestSerializiation();
-    }
-
-    public static void main(String[] args) throws Throwable {
-	boolean DEBUG=true;
-
-	//JayDLayGUI gui = new JayDLayGUI(null,null);
-	PolyToolGui gui = new PolyToolGui(null, null);
+	PolyToolGui gui = new PolyToolGui(new VSTPluginGUIRunner(), null);
 	gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	//gui.show();
-    }
-
-
-
-}
-
-
-class SomeClass implements Serializable {
-
-    private final static long serialVersionUID = 1; 
-
-    int i    = Integer.MAX_VALUE;
-    String s = "ABCDEFGHIJKLMNOP";
-    Double d = new Double( -1.0 );
-
-
-    String custom;
-
-    public String toString(){
-	return  "SomeClass instance says: Don't worry, " 
-		+ "I'm healthy. Look, my data is i = " + i  
-		+ ", s = " + s + ", d = " + d;
-    }
-
-    public void setCustom(String value)
-    {
-	this.custom = value;
-    }
-
-    public String getCustom()
-    {
-	return this.custom;
     }
 
 }
