@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -85,10 +87,20 @@ public class VstUtils {
      public static String toString( Serializable o ) throws IOException {
          ByteArrayOutputStream baos = new ByteArrayOutputStream();
          ObjectOutputStream oos = new ObjectOutputStream( baos );
-         oos.writeObject( o ); oos.close();
+         oos.writeObject( o ); 
+         oos.close();
          return Base64.getEncoder().encodeToString(baos.toByteArray()); 
      }
      
+     
+     public static void outStackTrace(Exception e)
+     {
+	 StringWriter sw = new StringWriter();
+	 PrintWriter pw = new PrintWriter(sw);
+	 e.printStackTrace(pw);
+	 String stackTrace = sw.toString(); // stack trace as a string	
+	 out(stackTrace);
+     }
      
      
      public static VSTEvents convertMidiChannel(VSTEvents inputEvents, int inputChannel, int outputChannel)

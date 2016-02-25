@@ -1,9 +1,15 @@
 package rjm.midi.tools;
 
+import java.io.Serializable;
+
 //This class was borrowed from another project which is why it has more functionality than is used by any dependent project as of this writing
 
-public class Note implements Comparable{
+public class Note implements Comparable, Serializable{
 
+	/**
+     * 
+     */
+    private static final long serialVersionUID = -1180161537746845593L;
 	private int midiNoteNum;
 	private int velocity;
 
