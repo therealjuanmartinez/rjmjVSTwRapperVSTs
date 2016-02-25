@@ -82,9 +82,9 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     public void HandleNewRowButton()
     {
+	addRow();
 	float rows = this.pPlugin.getParameter(PolyTool.PARAM_ID_ROWS);
 	this.pPlugin.setParameter(PolyTool.PARAM_ID_ROWS, rows + 1);
-	addRow();
     }
 
     public PolyToolGui( VSTPluginGUIRunner r, VSTPluginAdapter plugin ) throws Exception {
@@ -101,6 +101,12 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	        fxPanel.setScene(createScene());
 	        this.pPlugin = plugin;
 	        this.getContentPane().add(fxPanel);
+	        
+                float rows = this.pPlugin.getParameter(PolyTool.PARAM_ID_ROWS);
+	        for (int x = 0; x < rows; x++)
+	        {
+	            addRow();
+	        }
 	 
 	    if( RUNNING_MAC_X ) this.show();
 	}
