@@ -21,7 +21,10 @@ import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -49,26 +52,21 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         Scene  scene  =  new  Scene(root, Color.DARKRED);
         Text  text  =  new  Text();
         
-        text.setX(40);
-        text.setY(100);
+        HBox box = new HBox();
+        //box.setLayoutX(100);  can't get these to work right...
+        //box.setLayoutY(100);
+        box.getChildren().add(text);
+
         text.setFont(new Font(25));
-        text.setText("Welcome JavaFX!");
+        text.setText("PolyTool");
+        
+        Button b = new Button();
+        b.setText("Add row");
+        b.setOnAction(e -> this.HandleNewRowButton()); 
+        box.getChildren().add(b);
 
-        root.getChildren().add(text);
+        root.getChildren().add(box);
         
-      //A checkbox without a caption
-        cb1 = new CheckBox();
-        cb1.setText("Enable Midi Thru");
-        cb1.setLayoutX(50);
-        cb1.setLayoutY(115);
-        cb1.setSelected(true);
-        cb1.setId("testcb");
-        
-        //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
-        cb1.setOnAction(e -> this.HandleCheckbox(cb1));
-        
-        root.getChildren().add(cb1);
-
         return (scene);
     } 
     
@@ -80,7 +78,12 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	this.pPlugin.setParameterAutomated(JustEchoMidi.PARAM_ID_THRU, (checked) ? 1 : 0);
 
 	UIUtils.showAlert("ID is " + cb.getId() + " and checked is " + checked.toString());
-	
+    }
+    
+    public void HandleNewRowButton()
+    {
+	float rows = this.pPlugin.getParameter(PolyTool.PARAM_ID_ROWS);
+	this.pPlugin.setParameter(PolyTool.PARAM_ID_ROWS, rows + 1);
 	addRow();
     }
 
@@ -89,42 +92,16 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	super( r, plugin );
 	try
 	{
-	    //add
-	    //Jpanel declaration (?)
-
-	    this.setTitle( "Midi Echo VST" );
+	    this.setTitle( "PolyTool" );
 	    this.setSize(300, 200);
 
 	    this.rowCount = 0;
 	    
-	    //JFrame frame = new JFrame("Swing and JavaFX");
 	        final JFXPanel fxPanel = new JFXPanel();
 	        fxPanel.setScene(createScene());
 	        this.pPlugin = plugin;
-	        
 	        this.getContentPane().add(fxPanel);
-	        
-	        cb1 = new CheckBox();
-	        cb1.setText("Enable Midi Thru2");
-	        cb1.setLayoutX(50);
-	        cb1.setLayoutY(135);
-	        this.currYPos = 135;
-	        
-	        cb1.setSelected(true);
-	        cb1.setId("testcb");
-	        
-	        //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
-	        cb1.setOnAction(e -> this.HandleCheckbox(cb1)); 
-	        
-                Platform.runLater(new Runnable(){
-		    @Override
-		    public void run()
-		    { root.getChildren().add(cb1); }
-	        });
-	        
-	        //UIUtils.showAlert("Hey so i guess this worked??");
-	        
-	        
+	 
 	    if( RUNNING_MAC_X ) this.show();
 	}
 	catch (Exception e)
@@ -132,8 +109,6 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	    StringWriter sw = new StringWriter();
 	    PrintWriter pw = new PrintWriter(sw);
 	    e.printStackTrace(pw);
-	    VstUtils.out("ERROR: " + sw.toString()); // stack trace as a string
-	        UIUtils.showAlert("Hey so i guess this NOT worked?? " + sw.toString() );
 	}
 
     }
@@ -144,20 +119,44 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     {
 	int y = currYPos + rowHeight;
 
-	CheckBox cb = new CheckBox();
-	cb.setText("Enable Midi Thru2");
-	cb.setLayoutX(50);
-	cb.setLayoutY(y);
-	cb.setSelected(true);
-	cb.setId("cb_" + rowCount);
+	HBox b = new HBox();
+	
+	
+	//TODO
+	//Enabled, Input Chan, Input Note, Learn Button, Output Chan, CC#, CC Min, CC Max 
 
-	//This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
-	cb.setOnAction(e -> this.HandleCheckbox(cb)); 
+	int x = 0;
+	while (x < 2)
+	{
+	    CheckBox cb = new CheckBox();
+	    cb.setText("Test" + x);
+	    cb.setLayoutX(50);
+	    cb.setLayoutY(y);
+	    cb.setSelected(true);
+	    cb.setId("cb_" + rowCount);
+	    x++;
+
+	    //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
+	    cb.setOnAction(e -> this.HandleCheckbox(cb)); 
+
+	    b.getChildren().add(cb);
+
+	}
+	
+	TextField chan = new TextField();
+	chan.setText("1");
+	b.getChildren().add(chan);
+	
+	Button learnBtn = new Button();
+	learnBtn.setText("Learn Input Note");
+	b.getChildren().add(learnBtn);
+
+
 
 	Platform.runLater(new Runnable(){
 	    @Override
 	    public void run()
-	    { root.getChildren().add(cb); }
+	    { root.getChildren().add(b); }
 	});
 
 	rowCount++;

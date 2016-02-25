@@ -11,11 +11,12 @@ import javax.sound.midi.ShortMessage;
 
 import jvst.wrapper.VSTPluginAdapter;
 import jvst.wrapper.valueobjects.VSTEvents;
+import rjm.vst.javafx.UIUtils;
 import rjm.vst.tools.VstUtils;
 
 public class PolyTool extends VSTPluginAdapter{
 
-    public final static int PARAM_ID_VOLUME = 0;
+    public final static int PARAM_ID_ROWS = 0;
     public final static int PARAM_ID_THRU = 1;
 
     public rjm.vst.midi.examples.gui.swing.JustEchoMidiGui gui = null;
@@ -26,7 +27,7 @@ public class PolyTool extends VSTPluginAdapter{
 
     public static String[] PARAM_NAMES = new String[] { "CH1 Output Volume", "Midi Thru"  };
     public static String[] PARAM_LABELS = new String[] { "VolumeLabel", "EnabledLbl" };
-    public static float[] PARAM_PRINT_MUL = new float[] { 127, 1 };
+    public static float[] PARAM_PRINT_MUL = new float[] { 1, 1 };
     
 
     // Some default programs
@@ -119,6 +120,7 @@ public class PolyTool extends VSTPluginAdapter{
     }
 
     public float getParameter(int index) {
+	//UIUtils.showAlert("Someone wants parameter index " + index);
 	if (index < programs[currentProgram].length)
 	    return programs[currentProgram][index];
 	return 0.0f;
@@ -161,7 +163,7 @@ public class PolyTool extends VSTPluginAdapter{
 
     public void setParameter(int index, float value) {
 	programs[currentProgram][index] = value;
-	if (index == PARAM_ID_VOLUME)
+	if (index == PARAM_ID_ROWS)
 	{
 	    VstUtils.out("Volume set = false");
 	    volumeSet = false;
@@ -194,14 +196,14 @@ public class PolyTool extends VSTPluginAdapter{
 	
 	if (!volumeSet)//Inject Volume CC message at the top of the VSTEvents set
 	{
-	    VstUtils.out("Setting volume to " + getParameterMulValue(PolyTool.PARAM_ID_VOLUME));
+	    VstUtils.out("Setting volume to " + getParameterMulValue(PolyTool.PARAM_ID_ROWS));
                 int channel = 1; //hard coded for demo simplicity
                 int volumeCCNum = 07;  //This is standard MIDI
 		try
 		{
 		    //Create new MIDI message with volume info
 		    //Subtracting 1 from channel on next line since it does 0-15 instead of 1-16
-		    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE, channel - 1, volumeCCNum, getParameterMulValue(PolyTool.PARAM_ID_VOLUME));
+		    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE, channel - 1, volumeCCNum, getParameterMulValue(PolyTool.PARAM_ID_ROWS));
 		    //Add new message to VSTEvents collection
 		    ev = VstUtils.getVstEventsWithNewVstEventInserted(0, ev, VstUtils.createVstMidiEventFromShortMessage(s));
 		    volumeSet = true;
