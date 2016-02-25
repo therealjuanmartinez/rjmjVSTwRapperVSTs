@@ -2,8 +2,6 @@
 
 The main goal behind this project is to build VSTs that primarily focus on MIDI input/output logic instead of audio.  A driving goal of this was originally to transform polyphonic aftertouch and channel pressure into CC mappings.
 
-As of this writing there is NO GUI for any VST that I have authored but I hope to begin some work in this area as well.
-
 This project uses the available java-based jVSTwRapper libraries (http://jvstwrapper.sourceforge.net).  As of this writing I have included in this repository only the JAVA-BASED jVSTwRapper projects required to run the sample midi VSTs that are unique to this repository.  
 
 
