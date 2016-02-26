@@ -92,6 +92,24 @@ public class VstUtils {
          return Base64.getEncoder().encodeToString(baos.toByteArray()); 
      }
      
+     public static VSTEvents cloneVSTEvents(VSTEvents events)
+     {
+	 List<VSTEvent> e = cloneVSTEventsToList(events);
+	 return VstUtils.convertToVSTEvents(e);
+     }
+     
+     public static List<VSTEvent> cloneVSTEventsToList(VSTEvents events)
+     {
+	 List<VSTEvent> clonedEvents = new ArrayList<VSTEvent>();
+	 
+	 for (int i = 0; i < events.getNumEvents(); i++)
+	 {
+	     VSTEvent event = new VSTEvent();
+	     event = events.getEvents()[i];
+	     clonedEvents.add(event);
+	 }
+	 return clonedEvents;
+     }
      
      public static void outStackTrace(Exception e)
      {
@@ -164,7 +182,7 @@ public class VstUtils {
 
 	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
 
-	if (!true) //This prevents this hack of a logging function from running unless manually enabled
+	if (true) //This prevents this hack of a logging function from running unless manually enabled
 	{ return; }
 
 	try

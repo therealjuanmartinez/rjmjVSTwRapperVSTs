@@ -1,8 +1,11 @@
 package rjm.midi.tools;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
+import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
+import rjm.vst.tools.VstUtils;
 
 public class MidiUtils {
 
@@ -26,6 +29,31 @@ public class MidiUtils {
 
 	return new Note(note, vel);
     }
+    
+    public static ShortMessage getShortMessage(VSTMidiEvent event)
+    {
+	if( event.getType() == VSTEvent.VST_EVENT_MIDI_TYPE )
+	{
+	    try
+	    {
+		VstUtils.out("test this getShortMessage()");
+		byte[] msg_data = ((VSTMidiEvent)event).getData();
+
+		int msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
+		int ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
+		int ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
+
+		ShortMessage s;
+		s = new ShortMessage(status,  msg_channel - 1, ctrl_index, ctrl_value);
+		return s;
+	    } 
+	    catch (InvalidMidiDataException e)
+	    { }
+	}
+	return null;
+    }
+
     
     
     public static int getChannelFromMidiByteArray(byte[] msg_data)

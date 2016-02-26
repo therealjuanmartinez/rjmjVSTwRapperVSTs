@@ -3,6 +3,7 @@ package rjm.vst.midi.polytool;
 import java.io.Serializable;
 
 import rjm.midi.tools.Note;
+import rjm.vst.tools.VstUtils;
 
 public class PolyRow implements Serializable {
 	
@@ -18,6 +19,47 @@ public class PolyRow implements Serializable {
 	    maxOutputValue = 127;
 	    enabled = true;
 	}
+	
+	public String getDebugString()
+	{
+	    StringBuilder sb = new StringBuilder();
+	    sb.append("\n");
+	    sb.append("Enabled " + this.enabled + "\n");
+	    sb.append("ID " + this.id + "\n");
+	    sb.append("Input Channel " + this.inputChannel + "\n");
+	    sb.append("Output Channel " + this.outputChannel + "\n");
+	    sb.append("Output CC " + this.outputCCNum + "\n");
+	    sb.append("Max Out " + this.maxOutputValue + "\n");
+	    sb.append("Min Out " + this.minOutputValue + "\n");
+	    //sb.append("Note " + this. + "\n");
+	    return sb.toString();
+	}
+	
+	public Boolean isGoodToGo()
+	{
+	    if (!enabled)
+	    {
+		return false;
+	    }
+	    try
+	    {
+		note.getNoteName();
+	    }
+	    catch (Exception e){VstUtils.out("couldn't get note"); return false;}
+
+	    if ((inputChannel < 0)||
+            (outputChannel < 0)||
+            (outputCCNum < 0)||
+            (minOutputValue < 0)||
+            (maxOutputValue < 0)
+            )
+	    {
+		VstUtils.out("one of the values was bad");
+		return false;
+            }
+	    
+	    return true;
+	}
 
 	private Note note;
 	private int inputChannel;
@@ -27,7 +69,7 @@ public class PolyRow implements Serializable {
 	private int outputCCNum;
 	private int id;
 	private boolean enabled;
-
+	
 	public void setEnabled(boolean enabled)
 	{ this.enabled = enabled; }
 	public boolean getEnabled ()
