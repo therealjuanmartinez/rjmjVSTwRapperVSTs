@@ -17,6 +17,7 @@ public class PolyRow implements Serializable {
 	    outputChannel = -1;
 	    minOutputValue = 0;
 	    maxOutputValue = 127;
+	    noteOffCCValue = 0;
 	    enabled = true;
 	}
 	
@@ -66,6 +67,18 @@ public class PolyRow implements Serializable {
 	private int outputChannel;
 	private int minOutputValue;
 	private int maxOutputValue;
+	private int noteOffCCValue;
+
+	public int getNoteOffCCValue()
+	{
+	    return noteOffCCValue;
+	}
+
+	public void setNoteOffCCValue(int noteOffCCValue)
+	{
+	    this.noteOffCCValue = noteOffCCValue;
+	}
+
 	private int outputCCNum;
 	private int id;
 	private boolean enabled;

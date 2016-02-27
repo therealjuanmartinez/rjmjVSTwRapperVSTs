@@ -89,7 +89,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
 	    this.setTitle( "PolyTool" );
-	    this.setSize(600, 200);
+	    this.setSize(685, 200);
 	    
 	    this.addComponentListener(new ComponentAdapter() {
 		    @Override
@@ -272,6 +272,20 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         ccOut.setOnAction(e -> HandleOutCCCombo(ccOut));
         rowGrid.add(ccOut,6,0);
         HandleOutCCCombo(ccOut);
+        
+        
+        //This is the value we set CC to on note off 
+        ComboBox<String> noteOffValue = new ComboBox<String>();
+        noteOffValue.getItems().addAll(vals);
+        if (row.getNoteOffCCValue() >= 0)
+        { noteOffValue.getSelectionModel().select(Integer.toString(row.getMaxOutputValue())); }
+        else
+        { noteOffValue.getSelectionModel().select(0); }
+        noteOffValue.setId("" + row.getId());
+        noteOffValue.setOnAction(e -> HandleNoteOffValueCombo(noteOffValue));
+        rowGrid.add(noteOffValue,7,0);
+        HandleNoteOffValueCombo(noteOffValue);
+
         /*
         TextField ccOut = new TextField();
         ccOut.setText("11");
@@ -283,7 +297,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	delBtn.setText("Delete");
 	delBtn.setId("" + row.getId());
 	delBtn.setOnAction(e -> removeRow(rowGrid, Integer.parseInt(delBtn.getId()))); 
-        rowGrid.add(delBtn,7,0);
+        rowGrid.add(delBtn,8,0);
 	
         this.rowHeight = rowGrid.heightProperty().doubleValue(); //so we know how high these things are
 
@@ -391,6 +405,15 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	row.setOutputCCNum(Integer.parseInt(value));
 	getPolyCollection().updateRow(row);
     }
+    
+    public void HandleNoteOffValueCombo(ComboBox cb)
+    {
+	String value = cb.getValue().toString();
+	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	row.setNoteOffCCValue(Integer.parseInt(value));
+	getPolyCollection().updateRow(row);
+    }
+    
 
     
     public PolyRowCollection getPolyCollection()

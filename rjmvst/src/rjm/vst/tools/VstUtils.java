@@ -182,7 +182,7 @@ public class VstUtils {
 
 	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
 
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
+	if (!true) //This prevents this hack of a logging function from running unless manually enabled
 	{ return; }
 
 	try

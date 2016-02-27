@@ -99,6 +99,7 @@ public class PolyTool extends VSTPluginAdapter {
 	    ret = CANDO_YES;
 	if (feature.equals(CANDO_PLUG_RECEIVE_VST_MIDI_EVENT))
 	    ret = CANDO_YES;
+	
 
 	// if (feature.equals(CANDO_PLUG_MIDI_PROGRAM_NAMES)) //TODO: delete ???
 	// ret = CANDO_YES;
@@ -437,21 +438,36 @@ public class PolyTool extends VSTPluginAdapter {
 			//VstUtils.out("Found poly value " + ctrl_value);
 
 			//First change the value to adhere to the max/min supplied to this funciton
-			//out("min = " + row.getMinOutputValue());
-			//out("max = " + row.getMaxOutputValue());
-			//out("ctrl_value is " + ctrl_value);
 			double val = ctrl_value; //Converting to double seems to have fixed one bug in testing
 			double ratio = val / 127;
-			//out("ratio is " + ratio);
 			int delta = row.getMaxOutputValue() - row.getMinOutputValue();
-			//out("delta is " + delta);
 			int newval = (int)(delta * ratio) + row.getMinOutputValue();
-			//out("newval is " + newval);
 			ctrl_value = newval; //This is the new value that will be output to CC
-			//out("ctrl_value is " + ctrl_value);
 
 			try
 			{
+			    //Create new midi message
+			    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
+			    VSTMidiEvent newEvent = new VSTMidiEvent();
+			    newEvent.setData(s.getMessage());
+
+			    //VstUtils.out("newEvent channel is " + (newEvent.getData()[0] & 0xF));
+			    VSTEvent event = new VSTEvent();
+			    event = newEvent;
+			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
+			    newEvs.add(event);
+			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
+			} catch (InvalidMidiDataException e1)
+			{
+			    VstUtils.out(e1.getStackTrace().toString());
+			}
+		    }
+		    else if ((status == ShortMessage.NOTE_OFF)&&(row.getNote().getMidiNoteNumber() == noteNum)) //Poly for the desired note...
+		    {
+			try
+			{
+			    ctrl_value = row.getNoteOffCCValue();
 			    //Create new midi message
 			    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
@@ -583,7 +599,7 @@ public class PolyTool extends VSTPluginAdapter {
 
 	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
 
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
+	if (!true) //This prevents this hack of a logging function from running unless manually enabled
 	{ return; }
 
 	try
