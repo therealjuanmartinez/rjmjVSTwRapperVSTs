@@ -89,7 +89,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
 	    this.setTitle( "PolyTool" );
-	    this.setSize(685, 200);
+	    this.setSize(765, 200);
 	    
 	    this.addComponentListener(new ComponentAdapter() {
 		    @Override
@@ -185,6 +185,15 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	rowGrid.setStyle("-fx-background-color: #C0C0C0;");
 	//TODO
 	//Enabled, Input Chan (app level instead?), Input Note, Learn Button, (Output Chan make app level?), CC#, CC Min, CC Max 
+	
+        int numWidth = 50; //width of text fields that contain numbers
+	
+        TextField tfRowName = new TextField();
+	tfRowName.setText("Row " + row.getId());
+	tfRowName.setMaxWidth(90);
+	tfRowName.setStyle("-fx-background-color: #A0A0A0;");
+        tfRowName.setOnAction(e -> this.HandleRowName(tfRowName)); 
+	rowGrid.add(tfRowName,0,0);
 
         CheckBox cb = new CheckBox();
         cb.setText("Enabled");
@@ -192,9 +201,8 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         cb.setId("" + row.getId());
         //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
         cb.setOnAction(e -> this.HandleEnabledCheckbox(cb)); 
-        rowGrid.add(cb,0,0);
+        rowGrid.add(cb,1,0);
 
-        int numWidth = 50; //width of text fields that contain numbers
 
         String[] channels = new String[16];
         for (int i = 0; i < 16; i++){ channels[i] = Integer.toString(i + 1);}
@@ -208,7 +216,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         { cbInputChannel.getSelectionModel().select(0);}//Auto select channel 1 for input }
         cbInputChannel.setId("" + row.getId());
         cbInputChannel.setOnAction(e -> HandleInChannelCombo(cbInputChannel));
-        rowGrid.add(cbInputChannel,1,0);
+        rowGrid.add(cbInputChannel,2,0);
         HandleInChannelCombo(cbInputChannel);
         
         ComboBox<String> cbOutputChannel = new ComboBox<String>();
@@ -219,7 +227,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         { cbOutputChannel.getSelectionModel().select(0);}//Auto select channel 1 for input }
         cbOutputChannel.setId("" + row.getId());
         cbOutputChannel.setOnAction(e -> HandleOutChannelCombo(cbOutputChannel));
-        rowGrid.add(cbOutputChannel,2,0);
+        rowGrid.add(cbOutputChannel,3,0);
         HandleOutChannelCombo(cbOutputChannel);
 
 	Button learnBtn = new Button();
@@ -230,8 +238,8 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	}
 	learnBtn.setId("" + row.getId());
 	learnBtn.setMinWidth(77);
-	learnBtn.setOnAction(e -> learnKey(learnBtn)); 
-        rowGrid.add(learnBtn,3,0);
+	learnBtn.setOnAction(e -> HandleLearnButton(learnBtn)); 
+        rowGrid.add(learnBtn,4,0);
 
         String[] vals = new String[128];
         for (int i = 0; i < 128; i++){ vals[i] = Integer.toString(i);}
@@ -244,7 +252,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         { minValue.getSelectionModel().select(0); }//Auto select channel 1 for input }
         minValue.setId("" + row.getId());
         minValue.setOnAction(e -> HandleMinOutValueCombo(minValue));
-        rowGrid.add(minValue,4,0);
+        rowGrid.add(minValue,5,0);
         HandleMinOutValueCombo(minValue);
         
         
@@ -256,7 +264,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         { maxValue.getSelectionModel().select(127); }//Auto select channel 1 for input }
         maxValue.setId("" + row.getId());
         maxValue.setOnAction(e -> HandleMaxOutValueCombo(maxValue));
-        rowGrid.add(maxValue,5,0);
+        rowGrid.add(maxValue,6,0);
         HandleMaxOutValueCombo(maxValue);
 
         String[] ccVals = new String[64];
@@ -270,7 +278,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         { ccOut.getSelectionModel().select(12); }//Auto select CC 11 for arbitrary reasons
         ccOut.setId("" + row.getId());
         ccOut.setOnAction(e -> HandleOutCCCombo(ccOut));
-        rowGrid.add(ccOut,6,0);
+        rowGrid.add(ccOut,7,0);
         HandleOutCCCombo(ccOut);
         
         
@@ -278,12 +286,12 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         ComboBox<String> noteOffValue = new ComboBox<String>();
         noteOffValue.getItems().addAll(vals);
         if (row.getNoteOffCCValue() >= 0)
-        { noteOffValue.getSelectionModel().select(Integer.toString(row.getMaxOutputValue())); }
+        { noteOffValue.getSelectionModel().select(Integer.toString(row.getNoteOffCCValue())); }
         else
         { noteOffValue.getSelectionModel().select(0); }
         noteOffValue.setId("" + row.getId());
         noteOffValue.setOnAction(e -> HandleNoteOffValueCombo(noteOffValue));
-        rowGrid.add(noteOffValue,7,0);
+        rowGrid.add(noteOffValue,8,0);
         HandleNoteOffValueCombo(noteOffValue);
 
         /*
@@ -297,7 +305,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	delBtn.setText("Delete");
 	delBtn.setId("" + row.getId());
 	delBtn.setOnAction(e -> removeRow(rowGrid, Integer.parseInt(delBtn.getId()))); 
-        rowGrid.add(delBtn,8,0);
+        rowGrid.add(delBtn,9,0);
 	
         this.rowHeight = rowGrid.heightProperty().doubleValue(); //so we know how high these things are
 
@@ -318,7 +326,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     
     public Button currentLearnButton;
-    public void learnKey(Button learnBtn)
+    public void HandleLearnButton(Button learnBtn)
     {
 	Platform.runLater(new Runnable(){
             @Override
@@ -413,6 +421,15 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	row.setNoteOffCCValue(Integer.parseInt(value));
 	getPolyCollection().updateRow(row);
     }
+    
+    public void HandleRowName(TextField cb)
+    {
+	String value = cb.getText();
+	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	row.setName(value);
+	getPolyCollection().updateRow(row);
+    }
+    
     
 
     

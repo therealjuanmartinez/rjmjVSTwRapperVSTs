@@ -63,6 +63,17 @@ public class PolyRow implements Serializable {
 	}
 
 	private Note note;
+	private String name;
+	public String getName()
+	{
+	    return name;
+	}
+
+	public void setName(String name)
+	{
+	    this.name = name;
+	}
+
 	private int inputChannel;
 	private int outputChannel;
 	private int minOutputValue;

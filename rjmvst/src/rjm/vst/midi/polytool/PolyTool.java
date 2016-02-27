@@ -340,8 +340,12 @@ public class PolyTool extends VSTPluginAdapter {
     }
     
     //This is called when a learn button has been pressed and the next midi events come in
-    private void doLearnButton(VSTEvents events)
+    private VSTEvents doLearnButton(VSTEvents events)
     {
+	//Find the NOTE ON (if there is one), assign it to the Learned Button, and let all other messages be returned (to continue their flow)
+
+	List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
+	Boolean foundNoteOn = false;
 	for (int i = 0; i < events.getNumEvents(); i++)
 	{
 	    VSTEvent event = events.getEvents()[i];
@@ -349,7 +353,8 @@ public class PolyTool extends VSTPluginAdapter {
 	    {
 		byte[] msg_data = ((VSTMidiEvent)event).getData();
 		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
-		if (status == ShortMessage.NOTE_ON)
+
+		if ((status == ShortMessage.NOTE_ON) && (foundNoteOn == false))
 		{
 		    //We have our note
 		    try
@@ -378,14 +383,20 @@ public class PolyTool extends VSTPluginAdapter {
 				}
 			    }
 			});
+                        foundNoteOn = true; //So that we don't use other note ons
 
 		    } catch (Exception e)
 		    {
 			VstUtils.out(e.getMessage()); 
 		    }
 		}
+		else //Add to returned events this event since it is NOT the Note On
+		{
+		    newEvents.add(events.getEvents()[i]);
+		}
 	    }
 	}
+	return VstUtils.convertToVSTEvents(newEvents);
     }
     
     
@@ -423,17 +434,17 @@ public class PolyTool extends VSTPluginAdapter {
 
 		if (msg_channel == row.getInputChannel())
 		{
-		    VstUtils.out("Channel is correct at " + msg_channel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE );
+		    //VstUtils.out("Channel is correct at " + msg_channel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE );
 
 		    boolean foundPressureOrAftertouch = false;
 		    int noteNum = ctrl_index;
 		    
 		    //VstUtils.out("Looking for poly pressure against note " + row.getNote().getMidiNoteNumber());
 		    //VstUtils.out("Current is " + noteNum);
+                    ctrl_index = row.getOutputCCNum();
 		   
 		    if ((status == ShortMessage.POLY_PRESSURE)&&(row.getNote().getMidiNoteNumber() == noteNum)) //Poly for the desired note...
 		    {
-			ctrl_index = row.getOutputCCNum();
 			status = ShortMessage.CONTROL_CHANGE;
 			//VstUtils.out("Found poly value " + ctrl_value);
 
@@ -471,6 +482,7 @@ public class PolyTool extends VSTPluginAdapter {
 			    //Create new midi message
 			    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
+			    out("OK got a note off so sending CC value " + ctrl_value + " to CC " + ctrl_index);
 			    VSTMidiEvent newEvent = new VSTMidiEvent();
 			    newEvent.setData(s.getMessage());
 
@@ -543,7 +555,7 @@ public class PolyTool extends VSTPluginAdapter {
 	if (gui != null) 
 	{
 	    if (gui.currentLearnButton != null) //"Learn" the note from Learn button
-	    { doLearnButton(events); }
+	    { events = doLearnButton(events); }
 
 	    List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
 
@@ -581,6 +593,9 @@ public class PolyTool extends VSTPluginAdapter {
 		
 	    //FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
 	    out("newevents has " + newEvents.size() + " and adding " + origEvents.size() + " rfomr origEvents");
+	    out("newevents content before addition of orig:");
+	    VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
+
 	    newEvents.addAll(origEvents);
 	    origEvents = newEvents;
 	    
@@ -588,7 +603,7 @@ public class PolyTool extends VSTPluginAdapter {
             VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
 	}
 
-	this.sendVstEventsToHost(VstUtils.convertToVSTEvents(origEvents)); // simply echo all incoming events
+	this.sendVstEventsToHost(VstUtils.convertToVSTEvents(origEvents)); //Now shoot those MIDI events back out to the host
 	return 0;
     }
 
@@ -599,7 +614,7 @@ public class PolyTool extends VSTPluginAdapter {
 
 	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
 
-	if (!true) //This prevents this hack of a logging function from running unless manually enabled
+	if (true) //This prevents this hack of a logging function from running unless manually enabled
 	{ return; }
 
 	try
