@@ -89,7 +89,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
 	    this.setTitle( "PolyTool" );
-	    this.setSize(765, 200);
+	    this.setSize(790, 200);
 	    
 	    this.addComponentListener(new ComponentAdapter() {
 		    @Override
@@ -121,67 +121,42 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
    
   
 
-    public void addGuiRowHeader()
-    {
-	VstUtils.out("Adding row header");
-                //This is meant to be a single 1 row grid
-		GridPane rowGrid = new GridPane();
-		rowGrid.setPadding(new Insets(5));
-		rowGrid.setHgap(10);
-		rowGrid.setVgap(10);
-		//TODO
-		//Enabled, Input Chan, Input Note, Learn Button, Output Chan, CC#, CC Min, CC Max 
-		
-		Label lblEnabled = new Label();
-		lblEnabled.setFont(new Font("Arial", 7));
-		Label lblInputChannel = new Label();
-		lblInputChannel.setFont(new Font("Arial", 7));
-		Label lblNote = new Label();
-		lblNote.setFont(new Font("Arial", 7));
-		Label lblMax = new Label();
-		lblMax.setFont(new Font("Arial", 7));
-		Label lblMin = new Label();
-		lblMin.setFont(new Font("Arial", 7));
-		Label lblCC = new Label();
-		lblCC.setFont(new Font("Arial", 7));
-		
-		lblEnabled.setText("");
-		lblEnabled.setMinWidth(70);
-		lblInputChannel.setText("Input Chan");
-		lblNote.setText("Input Note");
-		lblMax.setText("Max Output Value");
-		lblMin.setText("Min Output Value");
-		lblCC.setText("CC Output");
-
-
-	        rowGrid.add(lblEnabled,0,0);
-	        rowGrid.add(lblInputChannel,1,0);
-	        rowGrid.add(lblNote,2,0);
-	        rowGrid.add(lblMin,3,0);
-	        rowGrid.add(lblMax,4,0);
-	        rowGrid.add(lblCC,5,0);
-
-		Platform.runLater(new Runnable(){
-		    @Override
-		    public void run()
-		    { rowBox.getChildren().add(rowGrid);
-		    }
-		});
-    }
-    
     
     public void addGuiRow(PolyRow row)
     {
-	if (((PolyTool)plugin).getPolyCollection().size() == 1) //First row just added to collection, so first row in GUI
-	{
-	    addGuiRowHeader();
-	}
+	
+	Label lblEnabled = new Label();
+	lblEnabled.setFont(new Font("Arial", 7));
+	Label lblOutputChannel = new Label();
+	lblOutputChannel.setFont(new Font("Arial", 7));
+	Label lblInputChannel = new Label();
+	lblInputChannel.setFont(new Font("Arial", 7));
+	Label lblNote = new Label();
+	lblNote.setFont(new Font("Arial", 7));
+	Label lblMax = new Label();
+	lblMax.setFont(new Font("Arial", 7));
+	Label lblMin = new Label();
+	lblMin.setFont(new Font("Arial", 7));
+	Label lblNoteOff = new Label();
+	lblNoteOff.setFont(new Font("Arial", 7));
+	Label lblCC = new Label();
+	lblCC.setFont(new Font("Arial", 7));
+	
+	lblEnabled.setText("Enabled");
+	lblEnabled.setMinWidth(70);
+	lblInputChannel.setText("Input Channel");
+	lblOutputChannel.setText("Input Channel");
+	lblNoteOff.setText("CC Value on Note Off");
+	lblNote.setText("Input Note");
+	lblMax.setText("Max Output Value");
+	lblMin.setText("Min Output Value");
+	lblCC.setText("CC Output");
 
 	//This is meant to be a single 1 row grid
 	GridPane rowGrid = new GridPane();
-	rowGrid.setPadding(new Insets(5));
+	rowGrid.setPadding(new Insets(4));
 	rowGrid.setHgap(10);
-	rowGrid.setVgap(10);
+	rowGrid.setVgap(5);
 	rowGrid.setStyle("-fx-background-color: #C0C0C0;");
 	//TODO
 	//Enabled, Input Chan (app level instead?), Input Note, Learn Button, (Output Chan make app level?), CC#, CC Min, CC Max 
@@ -202,6 +177,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
         cb.setOnAction(e -> this.HandleEnabledCheckbox(cb)); 
         rowGrid.add(cb,1,0);
+        rowGrid.add(lblEnabled, 1, 1);
 
 
         String[] channels = new String[16];
@@ -217,6 +193,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         cbInputChannel.setId("" + row.getId());
         cbInputChannel.setOnAction(e -> HandleInChannelCombo(cbInputChannel));
         rowGrid.add(cbInputChannel,2,0);
+        rowGrid.add(lblInputChannel,2,1);
         HandleInChannelCombo(cbInputChannel);
         
         ComboBox<String> cbOutputChannel = new ComboBox<String>();
@@ -228,6 +205,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         cbOutputChannel.setId("" + row.getId());
         cbOutputChannel.setOnAction(e -> HandleOutChannelCombo(cbOutputChannel));
         rowGrid.add(cbOutputChannel,3,0);
+        rowGrid.add(lblOutputChannel,3,1);
         HandleOutChannelCombo(cbOutputChannel);
 
 	Button learnBtn = new Button();
@@ -253,6 +231,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         minValue.setId("" + row.getId());
         minValue.setOnAction(e -> HandleMinOutValueCombo(minValue));
         rowGrid.add(minValue,5,0);
+        rowGrid.add(lblMin,5,1);
         HandleMinOutValueCombo(minValue);
         
         
@@ -265,6 +244,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         maxValue.setId("" + row.getId());
         maxValue.setOnAction(e -> HandleMaxOutValueCombo(maxValue));
         rowGrid.add(maxValue,6,0);
+        rowGrid.add(lblMax,6,1);
         HandleMaxOutValueCombo(maxValue);
 
         String[] ccVals = new String[64];
@@ -279,6 +259,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         ccOut.setId("" + row.getId());
         ccOut.setOnAction(e -> HandleOutCCCombo(ccOut));
         rowGrid.add(ccOut,7,0);
+        rowGrid.add(lblCC,7,1);
         HandleOutCCCombo(ccOut);
         
         
@@ -292,6 +273,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         noteOffValue.setId("" + row.getId());
         noteOffValue.setOnAction(e -> HandleNoteOffValueCombo(noteOffValue));
         rowGrid.add(noteOffValue,8,0);
+        rowGrid.add(lblNoteOff,8,1);
         HandleNoteOffValueCombo(noteOffValue);
 
         /*
