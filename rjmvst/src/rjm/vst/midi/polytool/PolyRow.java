@@ -19,6 +19,7 @@ public class PolyRow implements Serializable {
 	    maxOutputValue = 127;
 	    noteOffCCValue = 0;
 	    enabled = true;
+	    inverse = false;
 	}
 	
 	public String getDebugString()
@@ -36,7 +37,7 @@ public class PolyRow implements Serializable {
 	    return sb.toString();
 	}
 	
-	public Boolean isGoodToGo()
+	public Boolean isGoodForProcessing()
 	{
 	    if (!enabled)
 	    {
@@ -65,14 +66,10 @@ public class PolyRow implements Serializable {
 	private Note note;
 	private String name;
 	public String getName()
-	{
-	    return name;
-	}
+	{ return name; }
 
 	public void setName(String name)
-	{
-	    this.name = name;
-	}
+	{ this.name = name; }
 
 	private int inputChannel;
 	private int outputChannel;
@@ -81,19 +78,20 @@ public class PolyRow implements Serializable {
 	private int noteOffCCValue;
 
 	public int getNoteOffCCValue()
-	{
-	    return noteOffCCValue;
-	}
+	{ return noteOffCCValue; }
 
 	public void setNoteOffCCValue(int noteOffCCValue)
-	{
-	    this.noteOffCCValue = noteOffCCValue;
-	}
+	{ this.noteOffCCValue = noteOffCCValue; }
 
 	private int outputCCNum;
 	private int id;
 	private boolean enabled;
+	private boolean inverse;
 	
+	public boolean isInverse()
+	{ return inverse; }
+	public void setInverse(boolean inverse)
+	{ this.inverse = inverse; }
 	public void setEnabled(boolean enabled)
 	{ this.enabled = enabled; }
 	public boolean getEnabled ()
@@ -126,6 +124,5 @@ public class PolyRow implements Serializable {
 	{ return outputCCNum; }
 	public void setOutputCCNum(int outputCCNum)
 	{ this.outputCCNum = outputCCNum; }
-
 }
  

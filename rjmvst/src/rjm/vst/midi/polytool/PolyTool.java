@@ -38,6 +38,8 @@ public class PolyTool extends VSTPluginAdapter {
     PolyToolGui gui = null;
     
     PolyRowCollection polys = null;
+    
+    public static int PITCH_BEND = 70;
 
     public static int NUM_PARAMS = 1;
 
@@ -436,7 +438,7 @@ public class PolyTool extends VSTPluginAdapter {
 		{
 		    //VstUtils.out("Channel is correct at " + msg_channel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE );
 
-		    boolean foundPressureOrAftertouch = false;
+		    //boolean foundPressureOrAftertouch = false;
 		    int noteNum = ctrl_index;
 		    
 		    //VstUtils.out("Looking for poly pressure against note " + row.getNote().getMidiNoteNumber());
@@ -445,24 +447,39 @@ public class PolyTool extends VSTPluginAdapter {
 		   
 		    if ((status == ShortMessage.POLY_PRESSURE)&&(row.getNote().getMidiNoteNumber() == noteNum)) //Poly for the desired note...
 		    {
-			status = ShortMessage.CONTROL_CHANGE;
 			//VstUtils.out("Found poly value " + ctrl_value);
-
 			//First change the value to adhere to the max/min supplied to this funciton
 			double val = ctrl_value; //Converting to double seems to have fixed one bug in testing
 			double ratio = val / 127;
 			int delta = row.getMaxOutputValue() - row.getMinOutputValue();
-			int newval = (int)(delta * ratio) + row.getMinOutputValue();
+			int newval = 0;
+			if (!row.isInverse())
+			{ newval = (int)(delta * ratio) + row.getMinOutputValue(); }
+			else
+			{ newval = row.getMaxOutputValue() - (int)(delta * ratio); }
 			ctrl_value = newval; //This is the new value that will be output to CC
 
 			try
 			{
 			    //Create new midi message
-			    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+
+			    ShortMessage s = null;
+			    if (row.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
+			    {
+                                    s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+			    }
+			    else if (row.getOutputCCNum() == PITCH_BEND)
+			    {
+				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off"
+				//Otherwise go from 0 - 127 on both bytes, ~64 is middle (pitchwise)
+				//I'm certain there's a better high-res way to do this, but this is exactly how my CME keyboard does it
+				if (ctrl_value == 64) {ctrl_value--;} //I dunno, my keyboard never sends a [40][40] so I'm following that logic
+                                ctrl_index = ctrl_value;
+                                s = new ShortMessage(ShortMessage.PITCH_BEND, row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+			    }
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
 			    VSTMidiEvent newEvent = new VSTMidiEvent();
 			    newEvent.setData(s.getMessage());
-
 			    //VstUtils.out("newEvent channel is " + (newEvent.getData()[0] & 0xF));
 			    VSTEvent event = new VSTEvent();
 			    event = newEvent;
@@ -480,9 +497,18 @@ public class PolyTool extends VSTPluginAdapter {
 			{
 			    ctrl_value = row.getNoteOffCCValue();
 			    //Create new midi message
-			    ShortMessage s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+			    ShortMessage s = null;
+			    if (row.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
+			    {
+			        s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
+			    }
+			    else if (row.getOutputCCNum() == PITCH_BEND)
+			    {
+				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off" as MIDI standard
+                                s = new ShortMessage(ShortMessage.PITCH_BEND, row.getOutputChannel() - 1, 0, 64); //64=40-hex
+			    }
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
-			    out("OK got a note off so sending CC value " + ctrl_value + " to CC " + ctrl_index);
+			    VstUtils.out("OK got a note off so sending CC value " + ctrl_value + " to CC " + ctrl_index);
 			    VSTMidiEvent newEvent = new VSTMidiEvent();
 			    newEvent.setData(s.getMessage());
 
@@ -510,7 +536,7 @@ public class PolyTool extends VSTPluginAdapter {
     {
 	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
 	
-	out("Considering " + events.size() + " to clean");
+	VstUtils.out("Considering " + events.size() + " to clean");
 
 	for (int i = 0; i < events.size(); i++)
 	{
@@ -542,7 +568,7 @@ public class PolyTool extends VSTPluginAdapter {
 	    }
 	}
 
-	out("returning " + cleanedEvents.size());
+	VstUtils.out("returning " + cleanedEvents.size());
 
 	return cleanedEvents;
     }
@@ -563,43 +589,43 @@ public class PolyTool extends VSTPluginAdapter {
 
 	    for (int i = 0; i < this.polys.size(); i++)
 	    {
-		out("Checking row" + i);
+		VstUtils.out("Checking row" + i);
 		PolyRow row = polys.getRow(i);
-		out(row.getDebugString());
-		out("Here we are");
-		if (row.isGoodToGo()) //Instantiated and has usable values
+		VstUtils.out(row.getDebugString());
+		VstUtils.out("Here we are");
+		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
 		    //Get new CC events that need to be added to output
 		    List<VSTEvent> e = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents, row);
-		    out("e has " + e.size());
+		    VstUtils.out("e has " + e.size());
 		    newEvents.addAll(e); //Add new events to output
 		}
 		else
 		{
-		    out("Row was NOT good to go");
+		    VstUtils.out("Row was NOT good to go");
 		}
 	    }
 
 	    for (int i = 0; i < this.polys.size(); i++)
 	    {
 		PolyRow row = polys.getRow(i);
-		if (row.isGoodToGo()) //Instantiated and has usable values
+		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
 		    //Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
 		    origEvents = stripMessagesBasedOnNoteNum(origEvents, row.getInputChannel(), row.getNote().getMidiNoteNumber());
-		    out("origEvents now has " + origEvents.size() );
+		    VstUtils.out("origEvents now has " + origEvents.size() );
 		}
 	    }
 		
 	    //FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
-	    out("newevents has " + newEvents.size() + " and adding " + origEvents.size() + " rfomr origEvents");
-	    out("newevents content before addition of orig:");
+	    VstUtils.out("newevents has " + newEvents.size() + " and adding " + origEvents.size() + " rfomr origEvents");
+	    VstUtils.out("newevents content before addition of orig:");
 	    VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
 
 	    newEvents.addAll(origEvents);
 	    origEvents = newEvents;
 	    
-	    out("NEW EVENTS:");
+	    VstUtils.out("NEW EVENTS:");
             VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
 	}
 
@@ -609,51 +635,6 @@ public class PolyTool extends VSTPluginAdapter {
 
    
 
-    public static void out(String message)
-    {
-
-	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
-
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
-	{ return; }
-
-	try
-	{
-	    //HACK JMM
-	    //TODO remove this thing
-	    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-
-		    new FileOutputStream("c:\\temp\\jwrapper_log.txt", true), "UTF-8"));
-
-	    try
-	    {
-		writer.write(message + "\n");
-		writer.close();
-	    } catch (IOException e)
-	    {
-		try
-		{
-		    writer.write(message + "\n");
-		    writer.close();
-		} catch (IOException e1)
-		{
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		}
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	    }
-	} catch (UnsupportedEncodingException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	} catch (FileNotFoundException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-    }
-     
   
 
 
