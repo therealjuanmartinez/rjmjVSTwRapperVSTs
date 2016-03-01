@@ -144,17 +144,20 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	
         //int numWidth = 50; //width of text fields that contain numbers
 	
+	
+	//TODO - Fix bug where this text field doesn't seem to get saved/recalled
         TextField tfRowName = new TextField();
         if (row.getName() != null)
         { tfRowName.setText(row.getName()); }
         else 
         { tfRowName.setText("Row " + row.getId()); }
+        tfRowName.setId("" + row.getId());  //The "" in front makes it cast the input as a string
 	tfRowName.setMaxWidth(90);
 	tfRowName.setStyle("-fx-background-color: #A0A0A0;");
 	tfRowName.textProperty().addListener((observable, oldValue, newValue) -> {
 	    this.HandleRowName(tfRowName);
 	});
-        //tfRowName.setOnAction(e -> this.HandleRowName(tfRowName));  //Apparently this is only if REturn is pressed
+        //tfRowName.setOnAction(e -> this.HandleRowName(tfRowName));  //Apparently this is only if Return is pressed
 	rowGrid.add(tfRowName,index,0);
 	index++;
 
@@ -178,7 +181,6 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         else
         { cb1.setSelected(false); }
         cb1.setId("" + row.getId());
-        //This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
         cb1.setOnAction(e -> this.HandleInverseCheckbox(cb1)); 
         rowGrid.add(cb1,index,0);
         rowGrid.add(getRowLabel("Inverse"), index, 1);
@@ -272,6 +274,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         index++;
         
         
+        //TODO make this field invisible when doing pitch bend
         //This is the value we set CC to on note off 
         ComboBox<String> noteOffValue = new ComboBox<String>();
         noteOffValue.getItems().addAll(vals);
@@ -416,8 +419,10 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     public void HandleRowName(TextField cb)
     {
+	VstUtils.out("Handling Row Name");
 	String value = cb.getText();
 	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	VstUtils.out("Setting row name to " + value);
 	row.setName(value);
 	getPolyCollection().updateRow(row);
     }
