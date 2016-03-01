@@ -36,6 +36,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
 
 public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
@@ -46,7 +47,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     CheckBox cb1;
     int currYPos = 0;
-        double rowHeight;
+    double rowHeight;
 
     private VSTPluginAdapter pPlugin;
     
@@ -76,12 +77,12 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         parentBox.getChildren().add(rowBox);
 
         root.getChildren().add(parentBox);
+       
         
         return (scene);
     } 
     
  
-  
 
     public PolyToolGui( VSTPluginGUIRunner r, VSTPluginAdapter plugin ) throws Exception {
 
@@ -90,34 +91,41 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	{
 	    this.setTitle( "PolyTool" );
 	    this.setSize(805, 200);
-	    
+	    //Consider using setPreferredSize if this ever gives any issues
+
 	    this.addComponentListener(new ComponentAdapter() {
-		    @Override
-		    public void componentResized(ComponentEvent e)
-		    {
-		        //this. doesn't work
-		    }
-		});
-	    
+		@Override
+		public void componentResized(ComponentEvent e)
+		{
+		    //this. doesn't work
+		}
+	    });
+
+
+	    //TODO (close immediately if it's first opened, and then somehow know if it's launched again?)
+
 	    ((PolyTool)plugin).gui=this; //tell the plug that it has a gui!
 
-	    
-	        final JFXPanel fxPanel = new JFXPanel();
-	        fxPanel.setScene(createScene());
-	        this.pPlugin = plugin;
-	        this.getContentPane().add(fxPanel);
-	        
-	 
+
+	    final JFXPanel fxPanel = new JFXPanel();
+	    Scene scene = createScene();
+	    fxPanel.setScene(scene);
+	    this.pPlugin = plugin;
+	    this.getContentPane().add(fxPanel);
+
+
 	    if( RUNNING_MAC_X ) this.show();
 	}
 	catch (Exception e)
 	{
-	    StringWriter sw = new StringWriter();
-	    PrintWriter pw = new PrintWriter(sw);
-	    e.printStackTrace(pw);
+	    VstUtils.outStackTrace(e);
 	}
 
+
+
+
     }
+
    
   
     public Label getRowLabel(String text)
@@ -331,14 +339,14 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     public void HandleNewRowButton()
     {
 
-	VstUtils.out("Attempting to add row to poly collection");
+	//VstUtils.out("Attempting to add row to poly collection");
 	int rowId = -1;
 	try
 	{
             PolyRow row = new PolyRow();
-            VstUtils.out("Row has id of " + row.getId());
+            //VstUtils.out("Row has id of " + row.getId());
 	    rowId = ((PolyTool)plugin).getPolyCollection().add(row);
-            VstUtils.out("Row NOW has id of " + rowId);
+            //VstUtils.out("Row NOW has id of " + rowId);
             addGuiRow(row);
 	}
 	catch (Exception e)
@@ -480,7 +488,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     public static void main(String[] args) throws Throwable 
     {
 	PolyToolGui gui = new PolyToolGui(new VSTPluginGUIRunner(), null);
-	gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	gui.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE); //Apparently EXIT_ON_CLOSE can cause problems with jvstwrapper
 	//gui.show();
     }
 
