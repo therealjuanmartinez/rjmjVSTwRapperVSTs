@@ -71,6 +71,8 @@ public class PolyTool extends VSTPluginAdapter {
 
 	this.canProcessReplacing(true);// mandatory for vst 2.4!
 	this.setUniqueID('k' << 24 | 'R' << 16 | 'u' << 8 | 'b');// jRub
+	
+	this.isSynth(true);
 
 	VstUtils.out("LOADING");
 	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
@@ -86,29 +88,32 @@ public class PolyTool extends VSTPluginAdapter {
     {
 	return this.polys;
     }
+    
+    
+    public int getPlugCategory(){
+//      return PLUG_CATEG_UNKNOWN;
+//      return PLUG_CATEG_EFFECT;
+//      return PLUG_CATEG_GENERATOR;
+     return PLUG_CATEG_SYNTH;
+ }
 
-    public int canDo(String feature)
-    {
-	// the host asks us here what we are able to do
-	int ret = CANDO_NO;
+ public int canDo(String feature){
+     //log("harms synth cando: "+feature+".");
+     if(CANDO_PLUG_RECEIVE_VST_EVENTS.equals(feature))
+         return CANDO_YES;
+     if(CANDO_PLUG_RECEIVE_VST_MIDI_EVENT.equals(feature))
+         return CANDO_YES;
+      if(CANDO_PLUG_RECEIVE_VST_TIME_INFO.equals(feature))
+          return CANDO_YES;
+   //   if(CANDO_PLUG_MIDI_PROGRAM_NAMES.equals(feature))
+    //      return CANDO_YES;
+      if(CANDO_PLUG_SEND_VST_EVENTS.equals(feature))
+          return CANDO_YES;
+      if(CANDO_PLUG_SEND_VST_MIDI_EVENT.equals(feature))
+          return CANDO_YES;
+     return CANDO_NO;
+ }
 
-	if (feature.equals(CANDO_PLUG_SEND_VST_MIDI_EVENT))
-	    ret = CANDO_YES;
-	if (feature.equals(CANDO_PLUG_SEND_VST_EVENTS))
-	    ret = CANDO_YES;
-
-	if (feature.equals(CANDO_PLUG_RECEIVE_VST_EVENTS))
-	    ret = CANDO_YES;
-	if (feature.equals(CANDO_PLUG_RECEIVE_VST_MIDI_EVENT))
-	    ret = CANDO_YES;
-	
-
-	// if (feature.equals(CANDO_PLUG_MIDI_PROGRAM_NAMES)) //TODO: delete ???
-	// ret = CANDO_YES;
-
-	VstUtils.out("Host asked canDo: " + feature + " we replied: " + ret);
-	return ret;
-    }
 
     public String getProductString()
     {
@@ -259,11 +264,7 @@ public class PolyTool extends VSTPluginAdapter {
 	// TODO: ignored
     }
 
-    public int getPlugCategory()
-    {
-	// return PLUG_CATEG_EFFECT; //TODO: maybe return categ synth here ???
-	return PLUG_CATEG_SYNTH;
-    }
+   
 
     // Generate / Process the sound!
     public void processReplacing(float[][] inputs, float[][] outputs, int sampleFrames)

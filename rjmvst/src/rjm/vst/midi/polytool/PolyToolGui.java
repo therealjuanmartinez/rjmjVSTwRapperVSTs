@@ -77,6 +77,11 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         parentBox.getChildren().add(rowBox);
 
         root.getChildren().add(parentBox);
+        
+        
+	//https://sourceforge.net/p/jvstwrapper/discussion/318265/ - Go to THIS ONE so the view count doesn't increase
+        //https://sourceforge.net/p/jvstwrapper/discussion/318265/thread/23e17e9b/ 6 views 3/1 3:08PM
+	//									11 views 3/8 11:13AM - but 4 were mine, so 1 public view has happened
        
         
         return (scene);
