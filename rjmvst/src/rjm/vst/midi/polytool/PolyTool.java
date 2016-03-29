@@ -403,7 +403,6 @@ public class PolyTool extends VSTPluginAdapter {
     }
     
     
-    //private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(int cc, int inputChannel, int outputChannel, List<VSTEvent> ev, int max, int min)
     private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev, PolyRow row)
     {
 	List<VSTEvent> newEvs = new ArrayList<VSTEvent>();
@@ -445,8 +444,19 @@ public class PolyTool extends VSTPluginAdapter {
 		    //VstUtils.out("Looking for poly pressure against note " + row.getNote().getMidiNoteNumber());
 		    //VstUtils.out("Current is " + noteNum);
                     ctrl_index = row.getOutputCCNum();
-		   
-		    if ((status == ShortMessage.POLY_PRESSURE)&&(row.getNote().getMidiNoteNumber() == noteNum)) //Poly for the desired note...
+                    
+                    boolean noteMatchesOrUsingAllKeys = false;
+                    if (row.isUseAllKeys())
+                    {
+                	noteMatchesOrUsingAllKeys = true; //Apply effect regardless of which note is played 
+                    }
+                    else if (row.getNote() != null)
+                    {
+                	if (row.getNote().getMidiNoteNumber() == noteNum)
+                	{ noteMatchesOrUsingAllKeys = true; } //Poly for the desired note...
+                    }
+
+		    if ((status == ShortMessage.POLY_PRESSURE)&&(noteMatchesOrUsingAllKeys))
 		    {
 			//VstUtils.out("Found poly value " + ctrl_value);
 			//First change the value to adhere to the max/min supplied to this funciton
@@ -492,7 +502,7 @@ public class PolyTool extends VSTPluginAdapter {
 			    VstUtils.out(e1.getStackTrace().toString());
 			}
 		    }
-		    else if ((status == ShortMessage.NOTE_OFF)&&(row.getNote().getMidiNoteNumber() == noteNum)) //Poly for the desired note...
+		    else if ((status == ShortMessage.NOTE_OFF)&&(noteMatchesOrUsingAllKeys)) 
 		    {
 			try
 			{
@@ -573,18 +583,65 @@ public class PolyTool extends VSTPluginAdapter {
 
 	return cleanedEvents;
     }
+    
+    
+    public List<VSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events, int inputChannel, int outputChannel)
+    {
+	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
+	VstUtils.out("Considering " + events.size() + " to clean");
+
+	for (int i = 0; i < events.size(); i++)
+	{
+	    VSTEvent e = events.get(i);
+
+	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
+	    {
+		//out("Considering midi event...");
+
+		byte[] msg_data = ((VSTMidiEvent)e).getData();
+		int ctrl_index, ctrl_value, msg_status, msg_channel;
+		msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
+		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
+
+		if (msg_channel != inputChannel)//Incoming message not on captured input channel
+		{
+		    //Let it through, since it's not on the channel we're capturing
+                    cleanedEvents.add(e); 
+		}
+		else //matches input channel we're capturing
+		{
+		    if (status != ShortMessage.POLY_PRESSURE) //Ignoring all POLY messages
+		    {
+			if ((status == ShortMessage.NOTE_ON) || (status == ShortMessage.NOTE_OFF))
+			{
+			    //Update channel for this note on/off
+                            cleanedEvents.add(VstUtils.convertMidiChannel(e, inputChannel, outputChannel)); 
+                        }
+			else //Passing through messages as is, since they are not relevant to this logic 
+			    //and we don't want to drop them by default
+			{
+			    cleanedEvents.add(e);
+			}
+		    }
+		}
+	    }
+	}
+	VstUtils.out("returning " + cleanedEvents.size());
+	return cleanedEvents;
+    }
 
 
     // process MIDI
     public int processEvents(VSTEvents events)
     {
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
+        List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
 	if (gui != null) 
 	{
 	    if (gui.currentLearnButton != null) //"Learn" the note from Learn button
 	    { events = doLearnButton(events); }
 
-	    List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
 
 	    VstUtils.out("polys size is " + this.polys.size());
 
@@ -597,9 +654,13 @@ public class PolyTool extends VSTPluginAdapter {
 		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
 		    //Get new CC events that need to be added to output
-		    List<VSTEvent> e = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents, row);
-		    VstUtils.out("e has " + e.size());
-		    newEvents.addAll(e); //Add new events to output
+		    List<VSTEvent> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents, row);
+		    VstUtils.out("e has " + justNewCCEvents.size());
+
+                    //VstUtils.out("****************BELOW SHOULD ONLY BE CC EVENTS:");
+		    newEvents.addAll(justNewCCEvents); //Add new events to output
+                    //VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
+		    //VstUtils.out("****************END OF ONLY CC EVENTS");
 		}
 		else
 		{
@@ -613,24 +674,26 @@ public class PolyTool extends VSTPluginAdapter {
 		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
 		    //Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
-		    origEvents = stripMessagesBasedOnNoteNum(origEvents, row.getInputChannel(), row.getNote().getMidiNoteNumber());
-		    VstUtils.out("origEvents now has " + origEvents.size() );
+		    if (!row.isUseAllKeys())
+		    {
+                        origEvents = stripMessagesBasedOnNoteNum(origEvents, row.getInputChannel(), row.getNote().getMidiNoteNumber());
+		    }
+		    else
+		    {
+			origEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents, row.getInputChannel(), row.getOutputChannel());
+		    }
 		}
 	    }
 		
 	    //FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
-	    VstUtils.out("newevents has " + newEvents.size() + " and adding " + origEvents.size() + " rfomr origEvents");
-	    VstUtils.out("newevents content before addition of orig:");
-	    VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
-
 	    newEvents.addAll(origEvents);
-	    origEvents = newEvents;
 	    
-	    VstUtils.out("NEW EVENTS:");
+	    VstUtils.out("******************NEW EVENTS:");
             VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
+	    VstUtils.out("******************END OF NEW EVENTS:");
 	}
 
-	this.sendVstEventsToHost(VstUtils.convertToVSTEvents(origEvents)); //Now shoot those MIDI events back out to the host
+	this.sendVstEventsToHost(VstUtils.convertToVSTEvents(newEvents)); //Now shoot those MIDI events back out to the host
 	return 0;
     }
 

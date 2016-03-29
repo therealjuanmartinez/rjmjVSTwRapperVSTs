@@ -28,7 +28,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.RadioButtonBuilder;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -228,8 +231,21 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         rowGrid.add(getRowLabel("Output Channel"),index,1);
         HandleOutChannelCombo(cbOutputChannel);
         index++;
+        
+	Button learnBtn = new Button(); //Declaring this early so we can use it with the toggle switch 
 
-	Button learnBtn = new Button();
+        RadioButton rb1 = new RadioButton("Single Note");
+        RadioButton rb2 = new RadioButton("All Notes");
+        rb1.setSelected(true);
+        ToggleGroup gr = new ToggleGroup();
+        rb1.setToggleGroup(gr);
+        rb2.setToggleGroup(gr);
+        rowGrid.add(rb1,index,0);
+        rowGrid.add(rb2,index,1);
+        rb1.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn));
+        rb2.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn));
+        index++;
+
 	learnBtn.setText("Learn Note");
 	if (row.getNote() != null)
 	{ learnBtn.setText(row.getNote().getNoteNamePlusOctave()); }
@@ -349,9 +365,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
             PolyRow row = new PolyRow();
-            //VstUtils.out("Row has id of " + row.getId());
 	    rowId = ((PolyTool)plugin).getPolyCollection().add(row);
-            //VstUtils.out("Row NOW has id of " + rowId);
             addGuiRow(row);
 	}
 	catch (Exception e)
@@ -432,14 +446,27 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     public void HandleRowName(TextField cb)
     {
-	VstUtils.out("Handling Row Name");
 	String value = cb.getText();
 	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
-	VstUtils.out("Setting row name to " + value);
 	row.setName(value);
 	getPolyCollection().updateRow(row);
     }
     
+    public void HandleNoteModeSwitch(boolean isSingleNoteMode, int rowId, Button learnButton)
+    {
+	PolyRow row = getPolyCollection().getRowByRowId(rowId);
+	row.setUseAllKeys(!isSingleNoteMode);
+	getPolyCollection().updateRow(row);
+
+	//'Row' updated, the rest is just UI in this function
+        learnButton.setVisible(isSingleNoteMode);
+	if (isSingleNoteMode) 
+	{learnButton.setMinWidth(77);
+	 learnButton.setMaxWidth(200); } //The 200 is just a random large-ish value
+	else
+	{ learnButton.setMaxWidth(1); 
+	learnButton.setMinWidth(1);}
+    }
     
 
     

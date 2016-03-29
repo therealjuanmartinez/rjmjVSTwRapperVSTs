@@ -23,17 +23,20 @@ import javax.sound.midi.ShortMessage;
 import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
+import rjm.vst.javafx.UIUtils;
 
 public class VstUtils {
     
     public static VSTEvents convertToVSTEvents(List<VSTEvent> events)
     {
+	VstUtils.out("being asked to convert " + events.size() + " events to VST events");
 	VSTEvent[] newVstEvents = new VSTEvent[events.size()];
 	for (int i = 0; i < newVstEvents.length; i++)
 	{ newVstEvents[i] = events.get(i); }
 	VSTEvents eventsOut = new VSTEvents();
 	eventsOut.setEvents(newVstEvents);
 	eventsOut.setNumEvents(newVstEvents.length); //Seems this needed.  For now I'd rather not modify base jvstwrapper code to correct this
+	VstUtils.out("Returning " + eventsOut.getNumEvents() + " events");
 	return eventsOut;
     }
     
@@ -121,10 +124,24 @@ public class VstUtils {
      }
      
      
+     public static VSTEvent convertMidiChannel(VSTEvent inputEvent, int inputChannel, int outputChannel)
+     {
+	 List<VSTEvent> list = new ArrayList<VSTEvent>();
+	 list.add(inputEvent);
+	 VSTEvents newevents = VstUtils.convertToVSTEvents(list);
+	 VstUtils.out("New events has " + newevents.getEvents().length);
+	 newevents = convertMidiChannel(newevents, inputChannel, outputChannel);
+	 VstUtils.out("New events NOW has " + newevents.getEvents().length);
+	 return newevents.getEvents()[0];
+     }
+
      public static VSTEvents convertMidiChannel(VSTEvents inputEvents, int inputChannel, int outputChannel)
      {
 
  	List<VSTEvent> outputEvents = new ArrayList<VSTEvent>();
+ 	
+ 	VstUtils.out("convertMidiChannel received " + inputEvents.getNumEvents() + " events...");
+ 	VstUtils.out("convertMidiChannel received " + inputEvents.getEvents().length + " events...");
 
  	for (int i = 0; i < inputEvents.getEvents().length; i++)
  	{
@@ -173,6 +190,8 @@ public class VstUtils {
  	    { outputEvents.add(e); }
  	    
  	}
+ 	
+ 		VstUtils.out("OK!! convertMidiChannel now returning " + outputEvents.size() + " events....");
  	    return convertToVSTEvents(outputEvents);
     
      }

@@ -20,6 +20,7 @@ public class PolyRow implements Serializable {
 	    noteOffCCValue = 0;
 	    enabled = true;
 	    inverse = false;
+	    useAllKeys = false;
 	}
 	
 	public String getDebugString()
@@ -43,11 +44,14 @@ public class PolyRow implements Serializable {
 	    {
 		return false;
 	    }
-	    try
+	    if (!this.isUseAllKeys())
 	    {
-		note.getNoteName();
+		try
+		{
+		    note.getNoteName();
+		}
+		catch (Exception e){VstUtils.out("couldn't get note"); return false;}
 	    }
-	    catch (Exception e){VstUtils.out("couldn't get note"); return false;}
 
 	    if ((inputChannel < 0)||
             (outputChannel < 0)||
@@ -76,6 +80,8 @@ public class PolyRow implements Serializable {
 	private int minOutputValue;
 	private int maxOutputValue;
 	private int noteOffCCValue;
+	
+	private boolean useAllKeys;
 
 	public int getNoteOffCCValue()
 	{ return noteOffCCValue; }
@@ -124,5 +130,9 @@ public class PolyRow implements Serializable {
 	{ return outputCCNum; }
 	public void setOutputCCNum(int outputCCNum)
 	{ this.outputCCNum = outputCCNum; }
+	public boolean isUseAllKeys()
+	{ return useAllKeys; } 
+	public void setUseAllKeys(boolean useAllKeys)
+	{ this.useAllKeys = useAllKeys; } 
 }
  
