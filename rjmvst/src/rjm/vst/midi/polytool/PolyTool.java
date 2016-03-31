@@ -470,6 +470,12 @@ public class PolyTool extends VSTPluginAdapter {
 			{ newval = row.getMaxOutputValue() - (int)(delta * ratio); }
 			ctrl_value = newval; //This is the new value that will be output to CC
 
+			if (row.isDoingAveraging())
+			{
+			    row.submitRealtimeValue(ctrl_value);
+			    ctrl_value = row.getAverageValue();
+			}
+
 			try
 			{
 			    //Create new midi message
@@ -479,7 +485,7 @@ public class PolyTool extends VSTPluginAdapter {
 			    {
                                     s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    }
-			    else if (row.getOutputCCNum() == PITCH_BEND)
+			    else if (row.getOutputCCNum() == PITCH_BEND) //Yes this is a hack since PITCH_BEND is NOT a CC
 			    {
 				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off"
 				//Otherwise go from 0 - 127 on both bytes, ~64 is middle (pitchwise)
@@ -585,7 +591,7 @@ public class PolyTool extends VSTPluginAdapter {
     }
     
     
-    public List<VSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events, int inputChannel, int outputChannel)
+    public List<VSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events, int inputChannel, int outputChannel, boolean allowNotesToPlayThrough)
     {
 	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
 	VstUtils.out("Considering " + events.size() + " to clean");
@@ -616,7 +622,10 @@ public class PolyTool extends VSTPluginAdapter {
 			if ((status == ShortMessage.NOTE_ON) || (status == ShortMessage.NOTE_OFF))
 			{
 			    //Update channel for this note on/off
-                            cleanedEvents.add(VstUtils.convertMidiChannel(e, inputChannel, outputChannel)); 
+			    if (allowNotesToPlayThrough) //Only send if note play-through is enabled
+			    {
+                                    cleanedEvents.add(VstUtils.convertMidiChannel(e, inputChannel, outputChannel)); 
+			    }
                         }
 			else //Passing through messages as is, since they are not relevant to this logic 
 			    //and we don't want to drop them by default
@@ -673,14 +682,14 @@ public class PolyTool extends VSTPluginAdapter {
 		PolyRow row = polys.getRow(i);
 		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
-		    //Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
 		    if (!row.isUseAllKeys())
 		    {
+                        //Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
                         origEvents = stripMessagesBasedOnNoteNum(origEvents, row.getInputChannel(), row.getNote().getMidiNoteNumber());
 		    }
 		    else
 		    {
-			origEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents, row.getInputChannel(), row.getOutputChannel());
+			origEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents, row.getInputChannel(), row.getOutputChannel(), row.isPlayNotesActive());
 		    }
 		}
 	    }

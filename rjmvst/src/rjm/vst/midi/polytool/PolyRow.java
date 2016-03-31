@@ -1,6 +1,9 @@
 package rjm.vst.midi.polytool;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 import rjm.midi.tools.Note;
 import rjm.vst.tools.VstUtils;
@@ -9,6 +12,32 @@ public class PolyRow implements Serializable {
 	
 	private static final long serialVersionUID = -5877708938899912589L;
 	
+	private class DatedMidiVal {
+
+	    private int value;
+	    private Date timeReceived;
+
+	    public DatedMidiVal(int value, Date timeReceived) throws Exception
+	    {
+		super();
+		if ((value < 0)||(value > 127))
+		{
+		    throw new Exception("Error, non >=0, <=127 value received.");
+		}
+		this.value = value;
+		this.timeReceived = timeReceived;
+	    }
+	    
+	    public DatedMidiVal(int value) throws Exception
+	    { this(value, new Date()); }
+
+	    public int getValue()
+	    { return value; }
+
+	    public Date getTimeReceived()
+	    { return timeReceived; }
+	}
+
 	public PolyRow()
 	{
 	    note = null;
@@ -21,8 +50,95 @@ public class PolyRow implements Serializable {
 	    enabled = true;
 	    inverse = false;
 	    useAllKeys = false;
+	    
+	    doAveraging = false;
+	    latestVals = new ArrayList<DatedMidiVal>();
+	    isPlayNotes = true;
 	}
 	
+	public boolean isDoingAveraging()
+	{
+	    return this.doAveraging;
+	}
+	
+	//This whole boolean can probably be removed ultimately in favor of just
+	//doing this automatically when not in single-note mode
+	public void setIsDoingAveraging(boolean b)
+	{
+	    this.doAveraging = b;
+	}
+	
+	
+	public void submitRealtimeValue(int val)
+	{
+	    try
+	    {
+		latestVals.add(new DatedMidiVal(val));
+	    } 
+	    catch (Exception e)
+	    { }
+	}
+	
+	private void freshenValsArray()
+	{
+	    //Make sure values are less than X milliseconds old
+	    List<DatedMidiVal> oldVals = new ArrayList<DatedMidiVal>();
+	    
+	    for (int i = 0; i < latestVals.size(); i++)
+	    {
+		Date now = new Date();
+		long nowMillis = now.getTime();
+		long thenMillis = latestVals.get(i).getTimeReceived().getTime();
+		
+		long diff = nowMillis - thenMillis;
+
+		if (diff > 500)
+		{
+		    oldVals.add(latestVals.get(i));
+		}
+	    }
+	    
+	    for (int i = 0; i < oldVals.size(); i++)
+	    {
+		this.latestVals.remove(oldVals.get(i));
+	    }
+	}
+
+	public int getAverageValue()
+	{
+	    freshenValsArray();
+	    int avg;
+	    if (latestVals.get(latestVals.size() - 1).value == 127)
+	    {
+		avg = 127; //HACK... take this out once PolyRow class does its own processing of data
+                           //so that the 'decay' can be done over time even if no MIDI input is being recieved
+	    }
+	    else
+	    {
+		int total = 0;
+		for (int i = 0; i < latestVals.size(); i++)
+		{
+		    total += latestVals.get(i).getValue();
+		}
+		avg = total / latestVals.size();
+	    }
+	    return avg;
+	}
+	
+	
+	private boolean isPlayNotes;
+
+
+	public boolean isPlayNotesActive()
+	{
+	    return isPlayNotes;
+	}
+
+	public void setIsPlayNotesActive(boolean isPlayNotes)
+	{
+	    this.isPlayNotes = isPlayNotes;
+	}
+
 	public String getDebugString()
 	{
 	    StringBuilder sb = new StringBuilder();
@@ -93,6 +209,9 @@ public class PolyRow implements Serializable {
 	private int id;
 	private boolean enabled;
 	private boolean inverse;
+
+	private boolean doAveraging;
+	private List<DatedMidiVal> latestVals;
 	
 	public boolean isInverse()
 	{ return inverse; }

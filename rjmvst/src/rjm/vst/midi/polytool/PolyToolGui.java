@@ -98,7 +98,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
 	    this.setTitle( "PolyTool" );
-	    this.setSize(805, 200);
+	    this.setSize(900, 200);
 	    //Consider using setPreferredSize if this ever gives any issues
 
 	    this.addComponentListener(new ComponentAdapter() {
@@ -242,9 +242,24 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         rb2.setToggleGroup(gr);
         rowGrid.add(rb1,index,0);
         rowGrid.add(rb2,index,1);
-        rb1.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn));
-        rb2.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn));
         index++;
+        
+        
+        CheckBox cb3 = new CheckBox();
+        cb3.setText("");
+        if (row.isPlayNotesActive())
+        { cb3.setSelected(true); }
+        else
+        { cb3.setSelected(false); }
+        cb3.setId("" + row.getId());
+        cb3.setOnAction(e -> this.HandlePlayNotesCheckbox(cb3)); 
+        rowGrid.add(cb3,index,0);
+        Label labelNotesPlay = getRowLabel("Notes Play");
+        rowGrid.add(labelNotesPlay, index, 1);
+        index++;
+
+        rb1.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn, cb3, labelNotesPlay));
+        rb2.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), row.getId(), learnBtn, cb3, labelNotesPlay));
 
 	learnBtn.setText("Learn Note");
 	if (row.getNote() != null)
@@ -392,6 +407,14 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	getPolyCollection().updateRow(row);
     }
     
+    public void HandlePlayNotesCheckbox(CheckBox cb)
+    {
+	Boolean checked = cb.selectedProperty().get();
+	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	row.setIsPlayNotesActive(cb.isSelected());
+	getPolyCollection().updateRow(row);
+    }
+    
     public void HandleInChannelCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
@@ -452,19 +475,28 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	getPolyCollection().updateRow(row);
     }
     
-    public void HandleNoteModeSwitch(boolean isSingleNoteMode, int rowId, Button learnButton)
+    public void HandleNoteModeSwitch(boolean isSingleNoteMode, int rowId, Button learnButton, CheckBox cbPlayNotes, Label labelNotesPlay)
     {
 	PolyRow row = getPolyCollection().getRowByRowId(rowId);
 	row.setUseAllKeys(!isSingleNoteMode);
+	row.setIsDoingAveraging(!isSingleNoteMode); //default this to true when using multi-key mode.  
 	getPolyCollection().updateRow(row);
 
 	//'Row' updated, the rest is just UI in this function
         learnButton.setVisible(isSingleNoteMode);
+        cbPlayNotes.setVisible(!isSingleNoteMode);
+        labelNotesPlay.setVisible(!isSingleNoteMode);
+
+
 	if (isSingleNoteMode) 
 	{learnButton.setMinWidth(77);
+	labelNotesPlay.setMaxWidth(1);
+	cbPlayNotes.setMaxWidth(1);
 	 learnButton.setMaxWidth(200); } //The 200 is just a random large-ish value
 	else
 	{ learnButton.setMaxWidth(1); 
+	labelNotesPlay.setMaxWidth(200);
+	cbPlayNotes.setMaxWidth(200);
 	learnButton.setMinWidth(1);}
     }
     
