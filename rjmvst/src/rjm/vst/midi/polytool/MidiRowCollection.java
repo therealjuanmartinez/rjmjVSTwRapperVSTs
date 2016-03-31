@@ -77,7 +77,7 @@ public class MidiRowCollection implements Serializable {
 	
 	public MidiRow getRowByRowId(int id)
 	{
-	    for (int i = 0; i < rows.size(); i++)
+            for (int i = 0; i < rows.size(); i++)
 	    {
 		MidiRow row = rows.get(i);
 		if (row.getId() == id)
@@ -91,6 +91,43 @@ public class MidiRowCollection implements Serializable {
 	public MidiRow getRowByRowId(String id)
 	{
 	    return getRowByRowId(Integer.parseInt(id));
+	}
+	
+	public int getIndexFromRowId(int id)
+	{
+	    for (int i = 0; i < rows.size(); i++)
+	    {
+		MidiRow row = rows.get(i);
+		if (row.getId() == id)
+		{
+		    return i;
+		}
+	    }
+	    return -1;
+	}
+	
+	public boolean areAllRowsDisabled()
+	{
+	    for (int i = 0; i < rows.size(); i++)
+	    {
+		MidiRow row = rows.get(i);
+		if (row.getEnabled())
+		{
+		    return false;
+		}
+	    }
+	    return true;
+	}
+	
+	public MidiRow getSuccessorToThisMidiRow(MidiRow row) //Used for chaining
+	{
+	    int i = getIndexFromRowId(row.getId());
+	    if (this.rows.size() > i + 1)
+	    {
+		return this.rows.get(i + 1);
+	    }
+	    else
+	    { return null; }
 	}
 	
  }

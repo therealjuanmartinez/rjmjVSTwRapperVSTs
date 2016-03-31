@@ -58,12 +58,11 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     VBox rowBox;
     
-    //THIS IS THE HOT AREA RIGHT NOW
     private Scene createScene() {
         //Group  root  =  new  Group();
         this.root  =  new  VBox();
-        Scene  scene  =  new  Scene(root, Color.DARKRED);
-        Text  text  =  new  Text();
+        Scene scene  =  new  Scene(root, Color.DARKRED);
+        Text text  =  new  Text();
         
         VBox parentBox = new VBox();
         rowBox = new VBox();
@@ -71,12 +70,21 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 
         text.setFont(new Font(25));
         text.setText("PolyTool");
-        
+
+	GridPane rowGrid = new GridPane();
         Button btnNewRow = new Button();
         btnNewRow.setText("Add row");
         btnNewRow.setOnAction(e -> this.HandleNewRowButton()); 
-        parentBox.getChildren().add(btnNewRow);
+        int idx = 0;
+        rowGrid.add(btnNewRow,idx,0); idx++;
 
+        Button b = new Button();
+        b.setText("Add row");
+        b.setOnAction(e -> this.HandleNewRowButton()); 
+        rowGrid.add(b,idx,0); idx++;
+
+        parentBox.getChildren().add(rowGrid);
+        //parentBox.getChildren().add(btnNewRow);
         parentBox.getChildren().add(rowBox);
 
         root.getChildren().add(parentBox);
@@ -86,7 +94,6 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         //https://sourceforge.net/p/jvstwrapper/discussion/318265/thread/23e17e9b/ 6 views 3/1 3:08PM
 	//									11 views 3/8 11:13AM - but 4 were mine, so 1 public view has happened
        
-        
         return (scene);
     } 
     
@@ -98,7 +105,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	try
 	{
 	    this.setTitle( "PolyTool" );
-	    this.setSize(900, 200);
+	    this.setSize(1000, 200);
 	    //Consider using setPreferredSize if this ever gives any issues
 
 	    this.addComponentListener(new ComponentAdapter() {
@@ -379,7 +386,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	int rowId = -1;
 	try
 	{
-            MidiRow row = new PolyRow();
+            MidiRow row = new PolyRow((PolyTool)plugin);
 	    rowId = ((PolyTool)plugin).getMidiRowCollection().add(row);
             addGuiRow(row);
 	}

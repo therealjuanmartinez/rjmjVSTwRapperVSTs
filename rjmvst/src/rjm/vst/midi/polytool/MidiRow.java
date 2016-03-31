@@ -1,5 +1,6 @@
 package rjm.vst.midi.polytool;
 
+import jvst.wrapper.valueobjects.VSTEvents;
 import rjm.midi.tools.Note;
 
 public interface MidiRow {
@@ -36,6 +37,7 @@ public interface MidiRow {
     public void setOutputChannel(int x);
     public void setUseAllKeys(boolean x);
     public void submitRealtimeValue(int x);
+    public void processEvents(VSTEvents e);
     
 
 }

@@ -14,7 +14,9 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
@@ -46,7 +48,10 @@ public class PolyTool extends VSTPluginAdapter {
     public static String[] PARAM_LABELS = new String[] { "VolumeLabel", "EnabledLbl" };
     public static float[] PARAM_PRINT_MUL = new float[] { 0, 1 };
     
-    public static boolean DO_CHAINING = false; //todo link this to UI once both modes work fully
+    //Chaining works and is coded in, but not TOO tested yet... probably it's fine.
+    //Other thing about Chaining is that it sucks more than I thought it would, but 
+    //now that the logic's here I'm inclined to leave it in for now
+    public static boolean DO_CHAINING = false; 
 
     // Some default programs
     private float[][] programs = new float[][] { { 0.0f, 1 } };
@@ -77,6 +82,7 @@ public class PolyTool extends VSTPluginAdapter {
 
 	VstUtils.out("LOADING");
 	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
+	eventsToDeduplicate = new ArrayList<VSTEvent>();
     }
 
     public void resume()
@@ -402,244 +408,42 @@ public class PolyTool extends VSTPluginAdapter {
 	return VstUtils.convertToVSTEvents(newEvents);
     }
     
-    
-    private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev, MidiRow row)
+  
+
+    private List<VSTEvent> eventsToDeduplicate;
+    public void processMidiFromRow(VSTEvents events, MidiRow row)
     {
-	List<VSTEvent> newEvs = new ArrayList<VSTEvent>();
-	
-	//out("Got " + ev.size() + " events to consider");
-
-	for (int i = 0; i < ev.size(); i++)
+	if (!DO_CHAINING)
 	{
-	    VSTEvent e = ev.get(i);
+	    eventsToDeduplicate.addAll(VstUtils.convertVSTEventsToList(events));
 
-	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
-	    {
-		//out("Considering midi event...");
-
-		byte[] msg_data = ((VSTMidiEvent)e).getData();
-
-		int ctrl_index, ctrl_value, msg_status, msg_channel;
-                msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
-		if( msg_status == 0xF ) {
-		    /* Ignore system messages.*/
-		    //return;
-		}
-		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
-		ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
-		ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
-		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
-
-		//VstUtils.out("Status for incoming message is " + status);
-
-		//VstUtils.out("Channel is supposedly " + msg_channel + " and must match " + row.getInputChannel() + " in order to go further...");
-
-		if (msg_channel == row.getInputChannel())
-		{
-		    //VstUtils.out("Channel is correct at " + msg_channel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE );
-
-		    //boolean foundPressureOrAftertouch = false;
-		    int noteNum = ctrl_index;
-		    
-		    //VstUtils.out("Looking for poly pressure against note " + row.getNote().getMidiNoteNumber());
-		    //VstUtils.out("Current is " + noteNum);
-                    ctrl_index = row.getOutputCCNum();
-                    
-                    boolean noteMatchesOrUsingAllKeys = false;
-                    if (row.isUseAllKeys())
-                    {
-                	noteMatchesOrUsingAllKeys = true; //Apply effect regardless of which note is played 
-                    }
-                    else if (row.getNote() != null)
-                    {
-                	if (row.getNote().getMidiNoteNumber() == noteNum)
-                	{ noteMatchesOrUsingAllKeys = true; } //Poly for the desired note...
-                    }
-
-		    if ((status == ShortMessage.POLY_PRESSURE)&&(noteMatchesOrUsingAllKeys))
-		    {
-			//VstUtils.out("Found poly value " + ctrl_value);
-			//First change the value to adhere to the max/min supplied to this funciton
-			double val = ctrl_value; //Converting to double seems to have fixed one bug in testing
-			double ratio = val / 127;
-			int delta = row.getMaxOutputValue() - row.getMinOutputValue();
-			int newval = 0;
-			if (!row.isInverse())
-			{ newval = (int)(delta * ratio) + row.getMinOutputValue(); }
-			else
-			{ newval = row.getMaxOutputValue() - (int)(delta * ratio); }
-			ctrl_value = newval; //This is the new value that will be output to CC
-
-			if (row.isDoingAveraging())
-			{
-			    row.submitRealtimeValue(ctrl_value);
-			    ctrl_value = row.getAverageValue();
-			}
-
-			try
-			{
-			    //Create new midi message
-
-			    ShortMessage s = null;
-			    if (row.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
-			    {
-                                    s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
-			    }
-			    else if (row.getOutputCCNum() == PITCH_BEND) //Yes this is a hack since PITCH_BEND is NOT a CC
-			    {
-				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off"
-				//Otherwise go from 0 - 127 on both bytes, ~64 is middle (pitchwise)
-				//I'm certain there's a better high-res way to do this, but this is exactly how my CME keyboard does it
-				if (ctrl_value == 64) {ctrl_value--;} //I dunno, my keyboard never sends a [40][40] so I'm following that logic
-                                ctrl_index = ctrl_value;
-                                s = new ShortMessage(ShortMessage.PITCH_BEND, row.getOutputChannel() - 1, ctrl_index, ctrl_value);
-			    }
-			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
-			    VSTMidiEvent newEvent = new VSTMidiEvent();
-			    newEvent.setData(s.getMessage());
-			    //VstUtils.out("newEvent channel is " + (newEvent.getData()[0] & 0xF));
-			    VSTEvent event = new VSTEvent();
-			    event = newEvent;
-			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(event);
-			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
-			} catch (InvalidMidiDataException e1)
-			{
-			    VstUtils.out(e1.getStackTrace().toString());
-			}
-		    }
-		    else if ((status == ShortMessage.NOTE_OFF)&&(noteMatchesOrUsingAllKeys)) 
-		    {
-			try
-			{
-			    ctrl_value = row.getNoteOffCCValue();
-			    //Create new midi message
-			    ShortMessage s = null;
-			    if (row.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
-			    {
-			        s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  row.getOutputChannel() - 1, ctrl_index, ctrl_value);
-			    }
-			    else if (row.getOutputCCNum() == PITCH_BEND)
-			    {
-				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off" as MIDI standard
-                                s = new ShortMessage(ShortMessage.PITCH_BEND, row.getOutputChannel() - 1, 0, 64); //64=40-hex
-			    }
-			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
-			    VstUtils.out("OK got a note off so sending CC value " + ctrl_value + " to CC " + ctrl_index);
-			    VSTMidiEvent newEvent = new VSTMidiEvent();
-			    newEvent.setData(s.getMessage());
-
-			    //VstUtils.out("newEvent channel is " + (newEvent.getData()[0] & 0xF));
-			    VSTEvent event = new VSTEvent();
-			    event = newEvent;
-			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(event);
-			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
-			} catch (InvalidMidiDataException e1)
-			{
-			    VstUtils.out(e1.getStackTrace().toString());
-			}
-		    }
-		}
-
-	    }
+	    //Send data right out to host
+            //this.sendVstEventsToHost(events);
 	}
-
-	VstUtils.out("newEvs has " + newEvs.size() + " elements");
-	return newEvs;
-    }
-    
-    public List<VSTEvent> stripMessagesBasedOnNoteNum(List<VSTEvent> events, int stripChan, int stripNoteNum)
-    {
-	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
-	
-	VstUtils.out("Considering " + events.size() + " to clean");
-
-	for (int i = 0; i < events.size(); i++)
+	else
 	{
-	    VSTEvent e = events.get(i);
-
-	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
+	    //Send data to next item in the chain (if exists)
+	    MidiRow successorRow = midiRows.getSuccessorToThisMidiRow(row);
+	    if (successorRow != null)
 	    {
-		//out("Considering midi event...");
-
-		byte[] msg_data = ((VSTMidiEvent)e).getData();
-
-		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
-		if( msg_status == 0xF ) {
-		    /* Ignore system messages.*/
-		    //return;
-		}
-		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
-		ctrl_index = MidiUtils.getData1FromMidiByteArray(msg_data);
-		ctrl_value = MidiUtils.getData2FromMidiByteArray(msg_data);
-		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
-		int noteNum = ctrl_index;
-
-		//if (!((status == ShortMessage.NOTE_OFF)||(status == ShortMessage.NOTE_ON))&& (noteNum == stripNoteNum)&&(msg_channel == stripChan - 1))
-		if (!((noteNum == stripNoteNum)&&(msg_channel == stripChan)))
+		if (successorRow.getEnabled())
 		{
-		    cleanedEvents.add(e);
+                    //Send to next row
+                    successorRow.processEvents(events);
+		}
+		else
+		{
+		    processMidiFromRow(events, successorRow); //Recurse to next MidiRow
 		}
 	    }
-	}
-
-	VstUtils.out("returning " + cleanedEvents.size());
-
-	return cleanedEvents;
-    }
-    
-    
-    public List<VSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events, int inputChannel, int outputChannel, boolean allowNotesToPlayThrough)
-    {
-	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
-	VstUtils.out("Considering " + events.size() + " to clean");
-
-	for (int i = 0; i < events.size(); i++)
-	{
-	    VSTEvent e = events.get(i);
-
-	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
+	    else
 	    {
-		//out("Considering midi event...");
-
-		byte[] msg_data = ((VSTMidiEvent)e).getData();
-		int ctrl_index, ctrl_value, msg_status, msg_channel;
-		msg_status = MidiUtils.getStatusFromMidiByteArray(msg_data);
-		msg_channel = MidiUtils.getChannelFromMidiByteArray(msg_data);
-		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
-
-		if (msg_channel != inputChannel)//Incoming message not on captured input channel
-		{
-		    //Let it through, since it's not on the channel we're capturing
-                    cleanedEvents.add(e); 
-		}
-		else //matches input channel we're capturing
-		{
-		    if (status != ShortMessage.POLY_PRESSURE) //Ignoring all POLY messages
-		    {
-			if ((status == ShortMessage.NOTE_ON) || (status == ShortMessage.NOTE_OFF))
-			{
-			    //Update channel for this note on/off
-			    if (allowNotesToPlayThrough) //Only send if note play-through is enabled
-			    {
-                                    cleanedEvents.add(VstUtils.convertMidiChannel(e, inputChannel, outputChannel)); 
-			    }
-                        }
-			else //Passing through messages as is, since they are not relevant to this logic 
-			    //and we don't want to drop them by default
-			{
-			    cleanedEvents.add(e);
-			}
-		    }
-		}
+		//Finally, send MIDI to host
+		this.sendVstEventsToHost(events);
 	    }
 	}
-	VstUtils.out("returning " + cleanedEvents.size());
-	return cleanedEvents;
     }
-
+ 
 
     // process MIDI
     public int processEvents(VSTEvents events)
@@ -647,63 +451,47 @@ public class PolyTool extends VSTPluginAdapter {
 	//TODO process this through "MidiRow" interface objects 
 	
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
-        List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
 	if (gui != null) 
 	{
 	    if (gui.currentLearnButton != null) //"Learn" the note from Learn button
 	    { events = doLearnButton(events); }
 
-	    VstUtils.out("polys size is " + this.midiRows.size());
-
-	    for (int i = 0; i < this.midiRows.size(); i++)
-	    {
-		VstUtils.out("Checking row" + i);
-		MidiRow row = midiRows.getRow(i);
-		VstUtils.out(row.getDebugString());
-		VstUtils.out("Here we are");
-		if (row.isGoodForProcessing()) //Instantiated and has usable values
-		{
-		    //Get new CC events that need to be added to output
-		    List<VSTEvent> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents, row);
-		    VstUtils.out("e has " + justNewCCEvents.size());
-
-                    //VstUtils.out("****************BELOW SHOULD ONLY BE CC EVENTS:");
-		    newEvents.addAll(justNewCCEvents); //Add new events to output
-                    //VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
-		    //VstUtils.out("****************END OF ONLY CC EVENTS");
-		}
-		else
-		{
-		    VstUtils.out("Row was NOT good to go");
-		}
-	    }
-
-	    for (int i = 0; i < this.midiRows.size(); i++)
-	    {
-		MidiRow row = midiRows.getRow(i);
-		if (row.isGoodForProcessing()) //Instantiated and has usable values
-		{
-		    if (!row.isUseAllKeys())
-		    {
-                        //Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
-                        origEvents = stripMessagesBasedOnNoteNum(origEvents, row.getInputChannel(), row.getNote().getMidiNoteNumber());
-		    }
-		    else
-		    {
-			origEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents, row.getInputChannel(), row.getOutputChannel(), row.isPlayNotesActive());
-		    }
-		}
-	    }
-		
-	    //FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
-	    newEvents.addAll(origEvents);
+	    VstUtils.out("midiRows size is " + this.midiRows.size());
 	    
-	    VstUtils.out("******************NEW EVENTS:");
-            VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
-	    VstUtils.out("******************END OF NEW EVENTS:");
+	    if ((midiRows.size() == 0)||(midiRows.areAllRowsDisabled()))
+	    {
+		//Default to MIDI THRU on when no rows present...
+		this.sendVstEventsToHost(events);
+	    }
+
+	    if (!DO_CHAINING) //Go through all rows one by one and process them manually
+	    {
+		this.eventsToDeduplicate.clear();
+		for (int i = 0; i < this.midiRows.size(); i++)
+		{
+		    MidiRow row = this.midiRows.getRow(i);
+		    if (row.getEnabled())
+		    {
+                            row.processEvents(events);
+		    }
+		}
+
+		//DEDUPE NOW
+		Set<VSTEvent> uniqueSet = new LinkedHashSet<>(eventsToDeduplicate); //This should do the dedupe
+		List<VSTEvent> uniqueEvents = new ArrayList<VSTEvent>();
+		uniqueEvents.addAll(uniqueSet);
+		this.sendVstEventsToHost(VstUtils.convertToVSTEvents(uniqueEvents));
+	    }
+	    else //Doing chaining...
+	    {
+		//Just get first row to process, chaining will take care of any additional rows
+		if (midiRows.size() > 0)
+		{
+		    midiRows.getRow(0).processEvents(events);
+		}
+	    }
 	}
 
-	this.sendVstEventsToHost(VstUtils.convertToVSTEvents(newEvents)); //Now shoot those MIDI events back out to the host
 	return 0;
     }
 

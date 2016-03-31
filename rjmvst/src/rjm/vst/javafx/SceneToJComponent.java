@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2008-2009, JFXtras Group
  * All rights reserved.
@@ -75,7 +74,6 @@ import jvst.wrapper.VSTPluginAdapter;
  * JAVAFX_HOME=/opt/javafx-1.2
  * SHARED=$JAVAFX_HOME/lib/shared
  * DESKTOP=$JAVAFX_HOME/lib/desktop
-
  * CP=dist/jfxtras.jar
  * CP=$CP:$SHARED/javafxrt.jar
  * CP=$CP:$SHARED/javafxc.jar
@@ -165,4 +163,3 @@ public class SceneToJComponent {
     }
     
 }
-

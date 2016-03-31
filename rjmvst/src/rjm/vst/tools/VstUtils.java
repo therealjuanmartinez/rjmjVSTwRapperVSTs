@@ -40,6 +40,18 @@ public class VstUtils {
 	return eventsOut;
     }
     
+    
+    
+    
+    public static List<VSTEvent> convertVSTEventsToList(VSTEvents events)
+    {
+	List<VSTEvent> evlist = new ArrayList<VSTEvent>();
+	for (int i = 0; i < events.getNumEvents(); i++)
+                { evlist.add(events.getEvents()[i]);}
+	return evlist;
+    }
+    
+    
     public static VSTEvent createVstMidiEventFromShortMessage(ShortMessage s)
     {
         VSTMidiEvent newEvent = new VSTMidiEvent();
