@@ -2,6 +2,9 @@
 
 //This is an example "hello world" midi VST that only echoes incoming MIDI data
 
+
+//
+
 package rjm.vst.midi.polytool;
 
 import java.io.BufferedWriter;
@@ -32,7 +35,7 @@ import rjm.midi.tools.Note;
 import rjm.vst.javafx.UIUtils;
 import rjm.vst.tools.VstUtils;
 
-public class PolyTool extends VSTPluginAdapter {
+public class PolyTool extends VSTPluginAdapter implements Serializable {
 
     public final static int PARAM_ID_ROWS = 0;
     // public final static int PARAM_ID_THRU = 1;
@@ -315,6 +318,13 @@ public class PolyTool extends VSTPluginAdapter {
 	    //updateGUI();
 	    String serializedString = new String(data).trim();
 	    this.midiRows = (MidiRowCollection)VstUtils.fromString(serializedString);
+	    for (int i = 0; i < midiRows.size(); i++)
+	    {
+		MidiRow row = this.midiRows.getRow(i);
+		row.setPlugin(this);
+		//TODO is next line really needed?
+		getMidiRowCollection().updateRow(row);
+	    }
 	    updateGUI();
 	    
 	} catch (Exception e)

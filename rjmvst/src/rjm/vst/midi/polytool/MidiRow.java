@@ -1,9 +1,11 @@
 package rjm.vst.midi.polytool;
 
+import java.io.Serializable;
+
 import jvst.wrapper.valueobjects.VSTEvents;
 import rjm.midi.tools.Note;
 
-public interface MidiRow {
+public interface MidiRow extends Serializable {
     
     public int getAverageValue();
     public String getDebugString();
@@ -38,6 +40,6 @@ public interface MidiRow {
     public void setUseAllKeys(boolean x);
     public void submitRealtimeValue(int x);
     public void processEvents(VSTEvents e);
-    
+    public void setPlugin(PolyTool p); 
 
 }

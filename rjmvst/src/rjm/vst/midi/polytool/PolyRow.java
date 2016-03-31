@@ -47,7 +47,7 @@ public class PolyRow implements Serializable, MidiRow {
 	    { return timeReceived; }
 	}
 
-	PolyTool p;
+	transient PolyTool p;
 	public PolyRow(PolyTool p)
 	{
 	    note = null;
@@ -64,6 +64,11 @@ public class PolyRow implements Serializable, MidiRow {
 	    doAveraging = false;
 	    latestVals = new ArrayList<DatedMidiVal>();
 	    isPlayNotes = true;
+	    this.p = p;
+	}
+	
+	public void setPlugin(PolyTool p)
+	{
 	    this.p = p;
 	}
 	
@@ -222,7 +227,7 @@ public class PolyRow implements Serializable, MidiRow {
 	private boolean inverse;
 
 	private boolean doAveraging;
-	private List<DatedMidiVal> latestVals;
+	transient private List<DatedMidiVal> latestVals;
 	
 	public boolean isInverse()
 	{ return inverse; }

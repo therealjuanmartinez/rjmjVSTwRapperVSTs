@@ -29,7 +29,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
-import javafx.scene.control.RadioButtonBuilder;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
@@ -78,10 +77,12 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
         int idx = 0;
         rowGrid.add(btnNewRow,idx,0); idx++;
 
+        /*
         Button b = new Button();
         b.setText("Add row");
         b.setOnAction(e -> this.HandleNewRowButton()); 
         rowGrid.add(b,idx,0); idx++;
+        */
 
         parentBox.getChildren().add(rowGrid);
         //parentBox.getChildren().add(btnNewRow);
