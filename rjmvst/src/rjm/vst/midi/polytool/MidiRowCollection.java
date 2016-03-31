@@ -6,23 +6,23 @@ import java.util.ArrayList;
 import rjm.midi.tools.Note;
 import rjm.vst.tools.VstUtils;
 
-public class PolyRowCollection implements Serializable {
+public class MidiRowCollection implements Serializable {
 	private static final long serialVersionUID = 1769311394643385592L;
-	private ArrayList<PolyRow> rows;
+	private ArrayList<MidiRow> rows;
 	
 	int x ;
 
-	public PolyRowCollection()
+	public MidiRowCollection()
 	{
-	    rows = new ArrayList<PolyRow>();
+	    rows = new ArrayList<MidiRow>();
 	}
 	
-	public PolyRow getRow(int index)
+	public MidiRow getRow(int index)
 	{
 	    return rows.get(index);
 	}
 	
-	public int add(PolyRow row)
+	public int add(MidiRow row)
 	{
 	    row.setId(getNewId());
 	    rows.add(row);
@@ -34,7 +34,7 @@ public class PolyRowCollection implements Serializable {
 	    rows.clear();
 	}
 	
-	public void updateRow(PolyRow row)
+	public void updateRow(MidiRow row)
 	{
 	    for (int i = 0; i < rows.size(); i++)
 	    {
@@ -75,11 +75,11 @@ public class PolyRowCollection implements Serializable {
 	    return this.rows.size();
 	}
 	
-	public PolyRow getRowByRowId(int id)
+	public MidiRow getRowByRowId(int id)
 	{
 	    for (int i = 0; i < rows.size(); i++)
 	    {
-		PolyRow row = rows.get(i);
+		MidiRow row = rows.get(i);
 		if (row.getId() == id)
 		{
 		    return row;
@@ -88,7 +88,7 @@ public class PolyRowCollection implements Serializable {
 	    return null;
 	}
 	
-	public PolyRow getRowByRowId(String id)
+	public MidiRow getRowByRowId(String id)
 	{
 	    return getRowByRowId(Integer.parseInt(id));
 	}

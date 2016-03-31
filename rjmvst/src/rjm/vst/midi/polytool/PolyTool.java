@@ -37,15 +37,16 @@ public class PolyTool extends VSTPluginAdapter {
 
     PolyToolGui gui = null;
     
-    PolyRowCollection polys = null;
+    MidiRowCollection midiRows = null;
     
     public static int PITCH_BEND = 70;
-
     public static int NUM_PARAMS = 1;
 
     public static String[] PARAM_NAMES = new String[] { "Rows", "Midi Thru" };
     public static String[] PARAM_LABELS = new String[] { "VolumeLabel", "EnabledLbl" };
     public static float[] PARAM_PRINT_MUL = new float[] { 0, 1 };
+    
+    public static boolean DO_CHAINING = false; //todo link this to UI once both modes work fully
 
     // Some default programs
     private float[][] programs = new float[][] { { 0.0f, 1 } };
@@ -58,7 +59,7 @@ public class PolyTool extends VSTPluginAdapter {
 	// setProgramHasChunks(true);
 	currentProgram = 0;
 	
-	polys = new PolyRowCollection();
+        midiRows = new MidiRowCollection();
 
 	// Apparently this line is instrumental in letting DAW know that Chunks
 	// are its way of doing business
@@ -84,9 +85,9 @@ public class PolyTool extends VSTPluginAdapter {
 	wantEvents(1);
     }
     
-    public PolyRowCollection getPolyCollection()
+    public MidiRowCollection getMidiRowCollection()
     {
-	return this.polys;
+	return this.midiRows;
     }
     
     
@@ -278,7 +279,7 @@ public class PolyTool extends VSTPluginAdapter {
 	try
 	{
 	    //VstUtils.out("This.polys message: " + this.polys.getMessage());
-	    String polysSerializedString = VstUtils.toString(this.polys);
+	    String polysSerializedString = VstUtils.toString(this.midiRows);
 	    //String polysSerializedString = VstUtils.toString(this.polys);
 	    data[0] = polysSerializedString.getBytes();
 	    VstUtils.out("getChunk successfully returning '" + new String(data[0]) + "'");
@@ -306,8 +307,8 @@ public class PolyTool extends VSTPluginAdapter {
 	    //int rows = Integer.parseInt(new String(data).trim());
 	    //setParameter(PARAM_ID_ROWS, rows);
 	    //updateGUI();
-	    String polysSerializedString = new String(data).trim();
-	    this.polys = (PolyRowCollection)VstUtils.fromString(polysSerializedString);
+	    String serializedString = new String(data).trim();
+	    this.midiRows = (MidiRowCollection)VstUtils.fromString(serializedString);
 	    updateGUI();
 	    
 	} catch (Exception e)
@@ -333,10 +334,9 @@ public class PolyTool extends VSTPluginAdapter {
 	if (gui != null)
 	{
 	    gui.clearGuiRows();
-	    VstUtils.out("OK so we got the chunk, now polys size is " + polys.size());
-	    for (int i = 0; i < polys.size(); i++)
+	    for (int i = 0; i < midiRows.size(); i++)
 	    {
-		gui.addGuiRow(polys.getRow(i));
+		gui.addGuiRow(midiRows.getRow(i));
 	    }
 	}
 
@@ -373,9 +373,9 @@ public class PolyTool extends VSTPluginAdapter {
 				    //VstUtils.out("message is " + message);
 				    gui.currentLearnButton.setText(message);
 				    
-				    PolyRow row = polys.getRowByRowId(gui.currentLearnButton.getId());
+				    MidiRow row = midiRows.getRowByRowId(gui.currentLearnButton.getId());
 				    row.setNote(n);
-				    polys.updateRow(row);
+				    midiRows.updateRow(row);
 				    //VstUtils.out("Button not null... setting to null now.");
 				    gui.currentLearnButton = null;
 
@@ -403,7 +403,7 @@ public class PolyTool extends VSTPluginAdapter {
     }
     
     
-    private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev, PolyRow row)
+    private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev, MidiRow row)
     {
 	List<VSTEvent> newEvs = new ArrayList<VSTEvent>();
 	
@@ -644,6 +644,8 @@ public class PolyTool extends VSTPluginAdapter {
     // process MIDI
     public int processEvents(VSTEvents events)
     {
+	//TODO process this through "MidiRow" interface objects 
+	
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
         List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
 	if (gui != null) 
@@ -651,13 +653,12 @@ public class PolyTool extends VSTPluginAdapter {
 	    if (gui.currentLearnButton != null) //"Learn" the note from Learn button
 	    { events = doLearnButton(events); }
 
+	    VstUtils.out("polys size is " + this.midiRows.size());
 
-	    VstUtils.out("polys size is " + this.polys.size());
-
-	    for (int i = 0; i < this.polys.size(); i++)
+	    for (int i = 0; i < this.midiRows.size(); i++)
 	    {
 		VstUtils.out("Checking row" + i);
-		PolyRow row = polys.getRow(i);
+		MidiRow row = midiRows.getRow(i);
 		VstUtils.out(row.getDebugString());
 		VstUtils.out("Here we are");
 		if (row.isGoodForProcessing()) //Instantiated and has usable values
@@ -677,9 +678,9 @@ public class PolyTool extends VSTPluginAdapter {
 		}
 	    }
 
-	    for (int i = 0; i < this.polys.size(); i++)
+	    for (int i = 0; i < this.midiRows.size(); i++)
 	    {
-		PolyRow row = polys.getRow(i);
+		MidiRow row = midiRows.getRow(i);
 		if (row.isGoodForProcessing()) //Instantiated and has usable values
 		{
 		    if (!row.isUseAllKeys())

@@ -8,7 +8,7 @@ import java.util.List;
 import rjm.midi.tools.Note;
 import rjm.vst.tools.VstUtils;
 
-public class PolyRow implements Serializable {
+public class PolyRow implements Serializable, MidiRow {
 	
 	private static final long serialVersionUID = -5877708938899912589L;
 	
@@ -154,7 +154,7 @@ public class PolyRow implements Serializable {
 	    return sb.toString();
 	}
 	
-	public Boolean isGoodForProcessing()
+	public boolean isGoodForProcessing()
 	{
 	    if (!enabled)
 	    {

@@ -145,7 +145,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     }
 
     
-    public void addGuiRow(PolyRow row) //Create a row in the UI
+    public void addGuiRow(MidiRow row) //Create a row in the UI
     {
 	int index = 0;
 	
@@ -342,7 +342,7 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	
         this.rowHeight = rowGrid.heightProperty().doubleValue(); //so we know how high these things are
 
-        if (((PolyTool)plugin).getPolyCollection().size() == 2) //First row just added to collection, so first row in GUI
+        if (((PolyTool)plugin).getMidiRowCollection().size() == 2) //First row just added to collection, so first row in GUI
         {
             this.setSize(this.getSize().width, (int)this.getSize().height + (int)rowHeight);
         }
@@ -379,8 +379,8 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 	int rowId = -1;
 	try
 	{
-            PolyRow row = new PolyRow();
-	    rowId = ((PolyTool)plugin).getPolyCollection().add(row);
+            MidiRow row = new PolyRow();
+	    rowId = ((PolyTool)plugin).getMidiRowCollection().add(row);
             addGuiRow(row);
 	}
 	catch (Exception e)
@@ -394,93 +394,93 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     public void HandleEnabledCheckbox(CheckBox cb)
     {
 	Boolean checked = cb.selectedProperty().get();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setEnabled(checked);
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleInverseCheckbox(CheckBox cb)
     {
 	Boolean checked = cb.selectedProperty().get();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setInverse(cb.isSelected());
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandlePlayNotesCheckbox(CheckBox cb)
     {
 	Boolean checked = cb.selectedProperty().get();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setIsPlayNotesActive(cb.isSelected());
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleInChannelCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setInputChannel(Integer.parseInt(value));
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleOutChannelCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setOutputChannel(Integer.parseInt(value));
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleMinOutValueCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setMinOutputValue(Integer.parseInt(value));
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleMaxOutValueCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setMaxOutputValue(Integer.parseInt(value));
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleOutCCCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	if (value == "Pitch Bend")
 	{ row.setOutputCCNum(PolyTool.PITCH_BEND); }
 	else
 	{ row.setOutputCCNum(Integer.parseInt(value)); }
 	row.setOutputCCNum(Integer.parseInt(value));
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleNoteOffValueCombo(ComboBox cb)
     {
 	String value = cb.getValue().toString();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setNoteOffCCValue(Integer.parseInt(value)); 
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleRowName(TextField cb)
     {
 	String value = cb.getText();
-	PolyRow row = getPolyCollection().getRowByRowId(cb.getId());
+	MidiRow row = getMidiRowCollection().getRowByRowId(cb.getId());
 	row.setName(value);
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
     }
     
     public void HandleNoteModeSwitch(boolean isSingleNoteMode, int rowId, Button learnButton, CheckBox cbPlayNotes, Label labelNotesPlay)
     {
-	PolyRow row = getPolyCollection().getRowByRowId(rowId);
+	MidiRow row = getMidiRowCollection().getRowByRowId(rowId);
 	row.setUseAllKeys(!isSingleNoteMode);
 	row.setIsDoingAveraging(!isSingleNoteMode); //default this to true when using multi-key mode.  
-	getPolyCollection().updateRow(row);
+	getMidiRowCollection().updateRow(row);
 
 	//'Row' updated, the rest is just UI in this function
         learnButton.setVisible(isSingleNoteMode);
@@ -502,22 +502,22 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
 
     
-    public PolyRowCollection getPolyCollection()
+    public MidiRowCollection getMidiRowCollection()
     {
-	return ((PolyTool)plugin).getPolyCollection();
+	return ((PolyTool)plugin).getMidiRowCollection();
     }
     
     public void removeRow(GridPane b, int rowId)
     {
-	((PolyTool)plugin).getPolyCollection().removeRow(rowId);
+	((PolyTool)plugin).getMidiRowCollection().removeRow(rowId);
 	Platform.runLater(new Runnable(){
 	    @Override
 	    public void run()
 	    { rowBox.getChildren().remove(b); }
 	});
-	VstUtils.out("poly collection now has " + ((PolyTool)plugin).getPolyCollection().size());
+	VstUtils.out("poly collection now has " + ((PolyTool)plugin).getMidiRowCollection().size());
 	
-	if (((PolyTool)plugin).getPolyCollection().size() == 0)
+	if (((PolyTool)plugin).getMidiRowCollection().size() == 0)
         {
 	    clearGuiRows(); //will flush the header too
         }
