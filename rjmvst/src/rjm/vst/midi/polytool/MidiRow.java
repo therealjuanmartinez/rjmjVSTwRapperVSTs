@@ -2,6 +2,7 @@ package rjm.vst.midi.polytool;
 
 import java.io.Serializable;
 
+import javafx.scene.layout.GridPane;
 import jvst.wrapper.valueobjects.VSTEvents;
 import rjm.midi.tools.Note;
 
@@ -41,5 +42,6 @@ public interface MidiRow extends Serializable {
     public void submitRealtimeValue(int x);
     public void processEvents(VSTEvents e);
     public void setPlugin(PolyTool p); 
-
+    public int getRowHeight();
+    public GridPane getGuiRow();
 }

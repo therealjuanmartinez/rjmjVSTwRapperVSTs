@@ -41,8 +41,6 @@ public class VstUtils {
     }
     
     
-    
-    
     public static List<VSTEvent> convertVSTEventsToList(VSTEvents events)
     {
 	List<VSTEvent> evlist = new ArrayList<VSTEvent>();
