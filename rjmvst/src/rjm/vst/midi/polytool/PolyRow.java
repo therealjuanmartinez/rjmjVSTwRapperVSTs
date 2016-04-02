@@ -59,6 +59,7 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
     transient PolyTool p;
+    transient Button learnBtn;
     public PolyRow(PolyTool p)
     {
 	note = null;
@@ -108,8 +109,7 @@ public class PolyRow implements Serializable, MidiRow {
 	    try
 	    {
 		latestVals.add(new DatedMidiVal(val));
-	    }
-	    catch (Exception e1)
+	    } catch (Exception e1)
 	    { }
 	}
     }
@@ -139,7 +139,7 @@ public class PolyRow implements Serializable, MidiRow {
 	}
     }
 
-    public int getAverageValue()
+    private int getAverageValue()
     {
 	freshenValsArray();
 	int avg;
@@ -264,38 +264,43 @@ public class PolyRow implements Serializable, MidiRow {
     { return note; }
     public void setNote(Note note)
     { this.note = note; }
-    public int getInputChannel()
+    private int getInputChannel()
     { return inputChannel; }
-    public void setInputChannel(int inputChannel)
+    private void setInputChannel(int inputChannel)
     { this.inputChannel = inputChannel; }
-    public int getOutputChannel()
+    private int getOutputChannel()
     { return outputChannel; }
-    public void setOutputChannel(int outputChannel)
+    private void setOutputChannel(int outputChannel)
     { this.outputChannel = outputChannel; }
-    public int getMinOutputValue()
+    private int getMinOutputValue()
     { return minOutputValue; }
-    public void setMinOutputValue(int minOutputValue)
+    private void setMinOutputValue(int minOutputValue)
     { this.minOutputValue = minOutputValue; }
-    public int getMaxOutputValue()
+    private int getMaxOutputValue()
     { return maxOutputValue; }
-    public void setMaxOutputValue(int maxOutputValue)
+    private void setMaxOutputValue(int maxOutputValue)
     { this.maxOutputValue = maxOutputValue; }
-    public int getOutputCCNum()
+    private int getOutputCCNum()
     { return outputCCNum; }
-    public void setOutputCCNum(int outputCCNum)
+    private void setOutputCCNum(int outputCCNum)
     { this.outputCCNum = outputCCNum; }
-    public boolean isUseAllKeys()
+    private boolean isUseAllKeys()
     { return useAllKeys; } 
-    public void setUseAllKeys(boolean useAllKeys)
+    private void setUseAllKeys(boolean useAllKeys)
     { this.useAllKeys = useAllKeys; } 
 
 
 
 
+    private boolean doLearnButton;
     // process MIDI
     public void processEvents(VSTEvents events)
     {
 	//TODO process this through "MidiRow" interface objects 
+	
+	if (doLearnButton) //"Learn" the note from Learn button
+	  { events = doLearnButton(events, this.learnBtn); }
+
 
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
 	List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
@@ -591,11 +596,8 @@ public class PolyRow implements Serializable, MidiRow {
 	rowGrid.setHgap(10);
 	rowGrid.setVgap(5);
 	rowGrid.setStyle("-fx-background-color: #C0C0C0;");
-	//TODO
-	//Enabled, Input Chan (app level instead?), Input Note, Learn Button, (Output Chan make app level?), CC#, CC Min, CC Max 
 
 	//int numWidth = 50; //width of text fields that contain numbers
-
 
 	//TODO - Fix bug where this text field doesn't seem to get saved/recalled
 	TextField tfRowName = new TextField();
@@ -668,7 +670,7 @@ public class PolyRow implements Serializable, MidiRow {
 	HandleOutChannelCombo(cbOutputChannel);
 	index++;
 
-	Button learnBtn = new Button(); //Declaring this early so we can use it with the toggle switch 
+        learnBtn = new Button(); //Declaring this early so we can use it with the toggle switch 
 
 	RadioButton rb1 = new RadioButton("Single Note");
 	RadioButton rb2 = new RadioButton("All Notes");
@@ -800,20 +802,16 @@ public class PolyRow implements Serializable, MidiRow {
 	return (int) this.rowHeight;
     }
 
-
-
-
     private void HandleLearnButton(Button learnBtn)
     {
+	doLearnButton = true;
 	Platform.runLater(new Runnable(){
 	    @Override
 	    public void run()
 	    { learnBtn.setText("Play a key");
 	    }
 	});
-	p.gui.currentLearnButton = learnBtn;
     }
-
 
     private void HandleEnabledCheckbox(CheckBox cb)
     {
@@ -901,6 +899,61 @@ public class PolyRow implements Serializable, MidiRow {
 	cbPlayNotes.setMaxWidth(200);
 	learnButton.setMinWidth(1);}
     }
+
+
+ 
+    //This is called when a learn button has been pressed and the next midi events come in
+    //Find the NOTE ON (if there is one), assign it to the Learned Button, and let all other messages be returned (to continue their flow)
+    private VSTEvents doLearnButton(VSTEvents events, Button thisLearnButton)
+    {
+	List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
+	Boolean foundNoteOn = false;
+	for (int i = 0; i < events.getNumEvents(); i++)
+	{
+	    VSTEvent event = events.getEvents()[i];
+	    PolyRow row = this;
+	    if (event.getType() == VSTEvent.VST_EVENT_MIDI_TYPE)
+	    {
+		byte[] msg_data = ((VSTMidiEvent)event).getData();
+		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
+
+		if ((status == ShortMessage.NOTE_ON) && (foundNoteOn == false))
+		{
+		    //We have our note
+		    try
+		    {
+			this.learnBtn = null;
+			Platform.runLater(new Runnable(){
+			    @Override
+			    public void run()
+			    { 
+				try
+				{
+				    Note n = MidiUtils.getNote(MidiUtils.getShortMessage((VSTMidiEvent)event));
+				    thisLearnButton.setText(n.getNoteNamePlusOctave());
+                                    doLearnButton = false; //Because we've got the note
+
+				    row.setNote(n);
+				} catch (Exception e)
+				{ e.printStackTrace(); }
+			    }
+			});
+                        foundNoteOn = true; //So that we don't use other note ons
+
+		    } catch (Exception e)
+		    {
+			VstUtils.out(e.getMessage()); 
+		    }
+		}
+		else //Add to returned events this event since it is NOT the Note On
+		{
+		    newEvents.add(events.getEvents()[i]);
+		}
+	    }
+	}
+	return VstUtils.convertToVSTEvents(newEvents);
+    }
+    
 
 
 }

@@ -50,7 +50,6 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     CheckBox cb1;
     int currYPos = 0;
     
-    public Button currentLearnButton;
     private VSTPluginAdapter pPlugin;
     
     VBox root;

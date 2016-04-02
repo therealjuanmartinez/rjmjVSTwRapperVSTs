@@ -360,66 +360,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
     }
     
-    //This is called when a learn button has been pressed and the next midi events come in
-    private VSTEvents doLearnButton(VSTEvents events)
-    {
-	//Find the NOTE ON (if there is one), assign it to the Learned Button, and let all other messages be returned (to continue their flow)
-
-	List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
-	Boolean foundNoteOn = false;
-	for (int i = 0; i < events.getNumEvents(); i++)
-	{
-	    VSTEvent event = events.getEvents()[i];
-	    if (event.getType() == VSTEvent.VST_EVENT_MIDI_TYPE)
-	    {
-		byte[] msg_data = ((VSTMidiEvent)event).getData();
-		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
-
-		if ((status == ShortMessage.NOTE_ON) && (foundNoteOn == false))
-		{
-		    //We have our note
-		    try
-		    {
-			Platform.runLater(new Runnable(){
-			    @Override
-			    public void run()
-			    { 
-				try
-				{
-				    Note n = MidiUtils.getNote(MidiUtils.getShortMessage((VSTMidiEvent)event));
-				    String message = n.getNoteNamePlusOctave();
-				    //VstUtils.out("message is " + message);
-				    gui.currentLearnButton.setText(message);
-				    
-				    MidiRow row = midiRows.getRowByRowId(gui.currentLearnButton.getId());
-				    row.setNote(n);
-				    midiRows.updateRow(row);
-				    //VstUtils.out("Button not null... setting to null now.");
-				    gui.currentLearnButton = null;
-
-				} catch (Exception e)
-				{
-				    // TODO Auto-generated catch block
-				    e.printStackTrace();
-				}
-			    }
-			});
-                        foundNoteOn = true; //So that we don't use other note ons
-
-		    } catch (Exception e)
-		    {
-			VstUtils.out(e.getMessage()); 
-		    }
-		}
-		else //Add to returned events this event since it is NOT the Note On
-		{
-		    newEvents.add(events.getEvents()[i]);
-		}
-	    }
-	}
-	return VstUtils.convertToVSTEvents(newEvents);
-    }
-    
+   
   
 
     private List<VSTEvent> eventsToDeduplicate;
@@ -465,9 +406,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
 	if (gui != null) 
 	{
-	    if (gui.currentLearnButton != null) //"Learn" the note from Learn button
-	    { events = doLearnButton(events); }
-
+	  
 	    VstUtils.out("midiRows size is " + this.midiRows.size());
 	    
 	    if ((midiRows.size() == 0)||(midiRows.areAllRowsDisabled()))
