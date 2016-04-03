@@ -24,6 +24,7 @@ import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
 import rjm.midi.tools.MidiUtils;
 import rjm.midi.tools.Note;
+import rjm.vst.midi.polytool.PolyTool.VSTEventWithCategory;
 import rjm.vst.tools.VstUtils;
 
 public class PolyRow implements Serializable, MidiRow {
@@ -75,7 +76,7 @@ public class PolyRow implements Serializable, MidiRow {
 
 	doAveraging = false;
 	latestVals = new ArrayList<DatedMidiVal>();
-	isPlayNotes = true;
+	letNotesPlayThrough = true;
 	this.p = p;
     }
 
@@ -161,18 +162,10 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
 
-    private boolean isPlayNotes;
+    private boolean letNotesPlayThrough;
 
 
-    public boolean isPlayNotesActive()
-    {
-	return isPlayNotes;
-    }
-
-    public void setIsPlayNotesActive(boolean isPlayNotes)
-    {
-	this.isPlayNotes = isPlayNotes;
-    }
+ 
 
     public String getDebugString()
     {
@@ -303,14 +296,15 @@ public class PolyRow implements Serializable, MidiRow {
 
 
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
-	List<VSTEvent> newEvents = new ArrayList<VSTEvent>();
+	List<VSTEventWithCategory> newEvents = new ArrayList<VSTEventWithCategory>();
+	List<VSTEventWithCategory> newOrigEvents = new ArrayList<VSTEventWithCategory>();
 
 	VstUtils.out(getDebugString());
 	VstUtils.out("Here we are");
 	if (this.isGoodForProcessing()) //Instantiated and has usable values
 	{
 	    //Get new CC events that need to be added to output
-	    List<VSTEvent> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents);
+	    List<VSTEventWithCategory> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents);
 	    VstUtils.out("e has " + justNewCCEvents.size());
 
 	    //VstUtils.out("****************BELOW SHOULD ONLY BE CC EVENTS:");
@@ -327,30 +321,31 @@ public class PolyRow implements Serializable, MidiRow {
 	{
 	    if (!this.isUseAllKeys())
 	    {
-		//Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned
-		origEvents = stripMessagesBasedOnNoteNum(origEvents, this.inputChannel, this.note.getMidiNoteNumber());
+		//Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned if play notes checkbox allows
+		List<VSTEventWithCategory> set = stripMessagesBasedOnNoteNum(origEvents);
+		newOrigEvents = set;
 	    }
 	    else
 	    {
-		origEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents, this.inputChannel, this.outputChannel, this.isPlayNotes);
+		newOrigEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents);
 	    }
 	}
 
 	//FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
-	newEvents.addAll(origEvents);
+	newEvents.addAll(newOrigEvents);
 
 	VstUtils.out("******************NEW EVENTS:");
-	VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
+	VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents2(newEvents));
 	VstUtils.out("******************END OF NEW EVENTS:");
 
-	p.processMidiFromRow(VstUtils.convertToVSTEvents(newEvents), this); //Now shoot those MIDI events back out to parent plugin for further processing and/or chaining
+	p.processMidiFromRow(newEvents, this); //Now shoot those MIDI events back out to parent plugin for further processing and/or chaining
     }
 
 
 
-    private List<VSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events, int inputChannel, int outputChannel, boolean allowNotesToPlayThrough)
+    private List<VSTEventWithCategory> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events)//, int inputChannel, int outputChannel, boolean allowNotesToPlayThrough)
     {
-	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
+	List<VSTEventWithCategory> cleanedEvents = new ArrayList<VSTEventWithCategory>();
 	VstUtils.out("Considering " + events.size() + " to clean");
 
 	for (int i = 0; i < events.size(); i++)
@@ -370,7 +365,7 @@ public class PolyRow implements Serializable, MidiRow {
 		if (msg_channel != inputChannel)//Incoming message not on captured input channel
 		{
 		    //Let it through, since it's not on the channel we're capturing
-		    cleanedEvents.add(e); 
+		    cleanedEvents.add(new VSTEventWithCategory(e, false, false)); 
 		}
 		else //matches input channel we're capturing
 		{
@@ -378,16 +373,17 @@ public class PolyRow implements Serializable, MidiRow {
 		    {
 			if ((status == ShortMessage.NOTE_ON) || (status == ShortMessage.NOTE_OFF))
 			{
+			    cleanedEvents.add(new VSTEventWithCategory(e, false, true));  //remove original note-on
 			    //Update channel for this note on/off
-			    if (allowNotesToPlayThrough) //Only send if note play-through is enabled
+			    if (letNotesPlayThrough) //Only send if note play-through is enabled
 			    {
-				cleanedEvents.add(VstUtils.convertMidiChannel(e, inputChannel, outputChannel)); 
+				cleanedEvents.add(new VSTEventWithCategory(VstUtils.convertMidiChannel(e, inputChannel, outputChannel), true, false)); 
 			    }
 			}
 			else //Passing through messages as is, since they are not relevant to this logic 
 			    //and we don't want to drop them by default
 			{
-			    cleanedEvents.add(e);
+                             cleanedEvents.add(new VSTEventWithCategory(e, false, false));  //passthrough event
 			}
 		    }
 		}
@@ -398,9 +394,9 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
 
-    private List<VSTEvent> stripMessagesBasedOnNoteNum(List<VSTEvent> events, int stripChan, int stripNoteNum)
+    private List<VSTEventWithCategory>  stripMessagesBasedOnNoteNum(List<VSTEvent> events)
     {
-	List<VSTEvent> cleanedEvents = new ArrayList<VSTEvent>();
+	List<VSTEventWithCategory> returnEvents = new ArrayList<VSTEventWithCategory>();
 
 	VstUtils.out("Considering " + events.size() + " to clean");
 
@@ -426,23 +422,45 @@ public class PolyRow implements Serializable, MidiRow {
 		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 		int noteNum = ctrl_index;
 
-		//if (!((status == ShortMessage.NOTE_OFF)||(status == ShortMessage.NOTE_ON))&& (noteNum == stripNoteNum)&&(msg_channel == stripChan - 1))
-		if (!((noteNum == stripNoteNum)&&(msg_channel == stripChan)))
+		if 
+		(
+			((letNotesPlayThrough) || !(noteNum == note.getMidiNoteNumber()))
+			&&(msg_channel == inputChannel)
+		)
 		{
-		    cleanedEvents.add(e);
+
+		    //Basically this if statements will allow all messages to go through if they aren't associated with the learned note 
+		    //OR if they ARE associated with the learned note, they must not be POLY PRESSURE messages in order to get passed back to the calling function
+		    if ((noteNum == note.getMidiNoteNumber())&&(status != ShortMessage.POLY_PRESSURE))
+                        {
+			    //Generally this will be NOTE ON/OFF messages; just need to convert to proper output channel
+
+			    returnEvents.add(new VSTEventWithCategory(e, false, true)); //Removal of note on/off message on original channel
+			    if (letNotesPlayThrough)
+			    {
+				//Only send this message if note playthrough is allowed
+                                    returnEvents.add(new VSTEventWithCategory(VstUtils.convertMidiChannel(e, getInputChannel(), getOutputChannel()), true, false));
+			    }
+                        }
+                        else if
+			(!(noteNum == note.getMidiNoteNumber()))
+                        {
+                            returnEvents.add(new VSTEventWithCategory(e, false, false)); //passthrough
+                        }
 		}
 	    }
 	}
 
-	VstUtils.out("returning " + cleanedEvents.size());
-
-	return cleanedEvents;
+	//VstUtils.out("returning " + returnEvents.size());
+	//VstEventSet set = new VstEventSet(VstUtils.convertToVSTEvents(cleanedEvents), VstUtils.convertToVSTEvents(eventsWeDontWantTheHostToGet));
+	return returnEvents;
     }
+    
 
 
-    private List<VSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev)
+    private List<VSTEventWithCategory> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev)
     {
-	List<VSTEvent> newEvs = new ArrayList<VSTEvent>();
+	List<VSTEventWithCategory> newEvs = new ArrayList<VSTEventWithCategory>();
 
 	//out("Got " + ev.size() + " events to consider");
 
@@ -471,7 +489,7 @@ public class PolyRow implements Serializable, MidiRow {
 
 		//VstUtils.out("Channel is supposedly " + msg_channel + " and must match " + row.getInputChannel() + " in order to go further...");
 
-		if (msg_channel == this.getInputChannel())
+		if (msg_channel == getInputChannel())
 		{
 		    //VstUtils.out("Channel is correct at " + msg_channel + " and status is " + status + " though we're looking for a " + ShortMessage.POLY_PRESSURE );
 
@@ -480,37 +498,39 @@ public class PolyRow implements Serializable, MidiRow {
 
 		    //VstUtils.out("Looking for poly pressure against note " + row.getNote().getMidiNoteNumber());
 		    //VstUtils.out("Current is " + noteNum);
-		    ctrl_index = this.getOutputCCNum();
+		    ctrl_index = getOutputCCNum();
 
 		    boolean noteMatchesOrUsingAllKeys = false;
-		    if (this.isUseAllKeys())
+		    if (isUseAllKeys())
 		    {
 			noteMatchesOrUsingAllKeys = true; //Apply effect regardless of which note is played 
 		    }
-		    else if (this.getNote() != null)
+		    else if (getNote() != null)
 		    {
-			if (this.getNote().getMidiNoteNumber() == noteNum)
+			if (getNote().getMidiNoteNumber() == noteNum)
 			{ noteMatchesOrUsingAllKeys = true; } //Poly for the desired note...
 		    }
 
 		    if ((status == ShortMessage.POLY_PRESSURE)&&(noteMatchesOrUsingAllKeys))
 		    {
+			newEvs.add(new VSTEventWithCategory(e, false, true)); //Adding this POLY event as a removal item so no other rows pass them through
+
 			//VstUtils.out("Found poly value " + ctrl_value);
 			//First change the value to adhere to the max/min supplied to this funciton
 			double val = ctrl_value; //Converting to double seems to have fixed one bug in testing
 			double ratio = val / 127;
-			int delta = this.getMaxOutputValue() - this.getMinOutputValue();
+			int delta = getMaxOutputValue() - getMinOutputValue();
 			int newval = 0;
-			if (!this.isInverse())
-			{ newval = (int)(delta * ratio) + this.getMinOutputValue(); }
+			if (!isInverse())
+			{ newval = (int)(delta * ratio) + getMinOutputValue(); }
 			else
-			{ newval = this.getMaxOutputValue() - (int)(delta * ratio); }
+			{ newval = getMaxOutputValue() - (int)(delta * ratio); }
 			ctrl_value = newval; //This is the new value that will be output to CC
 
-			if (this.isDoingAveraging())
+			if (isDoingAveraging())
 			{
-			    this.submitRealtimeValue(ctrl_value);
-			    ctrl_value = this.getAverageValue();
+			    submitRealtimeValue(ctrl_value);
+			    ctrl_value = getAverageValue();
 			}
 
 			try
@@ -518,18 +538,18 @@ public class PolyRow implements Serializable, MidiRow {
 			    //Create new midi message
 
 			    ShortMessage s = null;
-			    if (this.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
+			    if (getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
 			    {
-				s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  this.getOutputChannel() - 1, ctrl_index, ctrl_value);
+				s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    }
-			    else if (this.getOutputCCNum() == PITCH_BEND) //Yes this is a hack since PITCH_BEND is NOT a CC
+			    else if (getOutputCCNum() == PITCH_BEND) //Yes this is a hack since PITCH_BEND is NOT a CC
 			    {
 				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off"
 				//Otherwise go from 0 - 127 on both bytes, ~64 is middle (pitchwise)
 				//I'm certain there's a better high-res way to do this, but this is exactly how my CME keyboard does it
 				if (ctrl_value == 64) {ctrl_value--;} //I dunno, my keyboard never sends a [40][40] so I'm following that logic
 				ctrl_index = ctrl_value;
-				s = new ShortMessage(ShortMessage.PITCH_BEND, this.getOutputChannel() - 1, ctrl_index, ctrl_value);
+				s = new ShortMessage(ShortMessage.PITCH_BEND, getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    }
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
 			    VSTMidiEvent newEvent = new VSTMidiEvent();
@@ -538,7 +558,7 @@ public class PolyRow implements Serializable, MidiRow {
 			    VSTEvent event = new VSTEvent();
 			    event = newEvent;
 			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(event);
+			    newEvs.add(new VSTEventWithCategory(event, true, false));
 			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
 			} catch (InvalidMidiDataException e1)
 			{
@@ -549,17 +569,17 @@ public class PolyRow implements Serializable, MidiRow {
 		    {
 			try
 			{
-			    ctrl_value = this.getNoteOffCCValue();
+			    ctrl_value = getNoteOffCCValue();
 			    //Create new midi message
 			    ShortMessage s = null;
-			    if (this.getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
+			    if (getOutputCCNum() <= 64) //Not a special, non-CC like Pitch Bend
 			    {
-				s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  this.getOutputChannel() - 1, ctrl_index, ctrl_value);
+				s = new ShortMessage(ShortMessage.CONTROL_CHANGE,  getOutputChannel() - 1, ctrl_index, ctrl_value);
 			    }
-			    else if (this.getOutputCCNum() == PITCH_BEND)
+			    else if (getOutputCCNum() == PITCH_BEND)
 			    {
 				//For Pitch Bend, 2 bytes need to be [0][40](hex) when pitch bend is "Off" as MIDI standard
-				s = new ShortMessage(ShortMessage.PITCH_BEND, this.getOutputChannel() - 1, 0, 64); //64=40-hex
+				s = new ShortMessage(ShortMessage.PITCH_BEND, getOutputChannel() - 1, 0, 64); //64=40-hex
 			    }
 			    //out("ShortMessage channel is " + s.getChannel() + " while output channel is " + outputChannel);
 			    VstUtils.out("OK got a note off so sending CC value " + ctrl_value + " to CC " + ctrl_index);
@@ -570,7 +590,7 @@ public class PolyRow implements Serializable, MidiRow {
 			    VSTEvent event = new VSTEvent();
 			    event = newEvent;
 			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(event);
+			    newEvs.add(new VSTEventWithCategory(event, true, false));
 			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
 			} catch (InvalidMidiDataException e1)
 			{
@@ -609,7 +629,7 @@ public class PolyRow implements Serializable, MidiRow {
 	tfRowName.setMaxWidth(90);
 	tfRowName.setStyle("-fx-background-color: #A0A0A0;");
 	tfRowName.textProperty().addListener((observable, oldValue, newValue) -> {
-	    this.HandleRowName(tfRowName);
+	    HandleRowName(tfRowName);
 	});
 	//tfRowName.setOnAction(e -> this.HandleRowName(tfRowName));  //Apparently this is only if Return is pressed
 	rowGrid.add(tfRowName,index,0);
@@ -623,7 +643,7 @@ public class PolyRow implements Serializable, MidiRow {
 	{ cb.setSelected(false); }
 	cb.setId("" + getId());
 	//This style of event handling below wasn't supposedly available until Java 8, and it's quite nice
-	cb.setOnAction(e -> this.HandleEnabledCheckbox(cb)); 
+	cb.setOnAction(e -> HandleEnabledCheckbox(cb)); 
 	rowGrid.add(cb,index,0);
 	rowGrid.add(getRowLabel("Enabled"), index, 1);
 	index++;
@@ -635,7 +655,7 @@ public class PolyRow implements Serializable, MidiRow {
 	else
 	{ cb1.setSelected(false); }
 	cb1.setId("" + getId());
-	cb1.setOnAction(e -> this.HandleInverseCheckbox(cb1)); 
+	cb1.setOnAction(e -> HandleInverseCheckbox(cb1)); 
 	rowGrid.add(cb1,index,0);
 	rowGrid.add(getRowLabel("Inverse"), index, 1);
 	index++;
@@ -685,16 +705,17 @@ public class PolyRow implements Serializable, MidiRow {
 
 	CheckBox cb3 = new CheckBox();
 	cb3.setText("");
-	if (isPlayNotesActive())
+	if (letNotesPlayThrough)
 	{ cb3.setSelected(true); }
 	else
 	{ cb3.setSelected(false); }
 	cb3.setId("" + getId());
-	cb3.setOnAction(e -> this.HandlePlayNotesCheckbox(cb3)); 
+	cb3.setOnAction(e -> HandlePlayNotesCheckbox(cb3)); 
 	rowGrid.add(cb3,index,0);
 	Label labelNotesPlay = getRowLabel("Notes Play");
 	rowGrid.add(labelNotesPlay, index, 1);
 	index++;
+
 
 	rb1.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), getId(), learnBtn, cb3, labelNotesPlay));
 	rb2.setOnAction(e -> HandleNoteModeSwitch(rb1.isSelected(), getId(), learnBtn, cb3, labelNotesPlay));
@@ -778,7 +799,7 @@ public class PolyRow implements Serializable, MidiRow {
 	rowGrid.add(delBtn,index,0);
 	index++;
 
-	this.rowHeight = (int)rowGrid.heightProperty().doubleValue(); //so we know how high these things are
+	rowHeight = (int)rowGrid.heightProperty().doubleValue(); //so we know how high these things are
 
 
 	return rowGrid;
@@ -799,7 +820,7 @@ public class PolyRow implements Serializable, MidiRow {
 
     public int getRowHeight()
     {
-	return (int) this.rowHeight;
+	return (int) rowHeight;
     }
 
     private void HandleLearnButton(Button learnBtn)
@@ -827,8 +848,7 @@ public class PolyRow implements Serializable, MidiRow {
 
     private void HandlePlayNotesCheckbox(CheckBox cb)
     {
-	Boolean checked = cb.selectedProperty().get();
-	setIsPlayNotesActive(cb.isSelected());
+	letNotesPlayThrough = cb.selectedProperty().get();
     }
 
     private void HandleInChannelCombo(ComboBox cb)
@@ -922,7 +942,7 @@ public class PolyRow implements Serializable, MidiRow {
 		    //We have our note
 		    try
 		    {
-			this.learnBtn = null;
+			learnBtn = null;
 			Platform.runLater(new Runnable(){
 			    @Override
 			    public void run()

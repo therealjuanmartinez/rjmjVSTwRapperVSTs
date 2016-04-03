@@ -41,20 +41,16 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
     // public final static int PARAM_ID_THRU = 1;
 
     PolyToolGui gui = null;
-    
+
     MidiRowCollection midiRows = null;
-    
+
     public static int PITCH_BEND = 70;
     public static int NUM_PARAMS = 1;
 
     public static String[] PARAM_NAMES = new String[] { "Rows", "Midi Thru" };
     public static String[] PARAM_LABELS = new String[] { "VolumeLabel", "EnabledLbl" };
     public static float[] PARAM_PRINT_MUL = new float[] { 0, 1 };
-    
-    //Chaining works and is coded in, but not TOO tested yet... probably it's fine.
-    //Other thing about Chaining is that it sucks more than I thought it would, but 
-    //now that the logic's here I'm inclined to leave it in for now
-    public static boolean DO_CHAINING = false; 
+
 
     // Some default programs
     private float[][] programs = new float[][] { { 0.0f, 1 } };
@@ -66,8 +62,8 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
 	// setProgramHasChunks(true);
 	currentProgram = 0;
-	
-        midiRows = new MidiRowCollection();
+
+	midiRows = new MidiRowCollection();
 
 	// Apparently this line is instrumental in letting DAW know that Chunks
 	// are its way of doing business
@@ -80,12 +76,13 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
 	this.canProcessReplacing(true);// mandatory for vst 2.4!
 	this.setUniqueID('k' << 24 | 'R' << 16 | 'u' << 8 | 'b');// jRub
-	
+
 	this.isSynth(true);
 
 	VstUtils.out("LOADING");
 	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
-	eventsToDeduplicate = new ArrayList<VSTEvent>();
+
+	events = new ArrayList<VSTEventWithCategory>(); //Events created by a MidiRow
     }
 
     public void resume()
@@ -93,36 +90,36 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	// Need to call this so the host knows we want MIDI events.
 	wantEvents(1);
     }
-    
+
     public MidiRowCollection getMidiRowCollection()
     {
 	return this.midiRows;
     }
-    
-    
-    public int getPlugCategory(){
-//      return PLUG_CATEG_UNKNOWN;
-//      return PLUG_CATEG_EFFECT;
-//      return PLUG_CATEG_GENERATOR;
-     return PLUG_CATEG_SYNTH;
- }
 
- public int canDo(String feature){
-     //log("harms synth cando: "+feature+".");
-     if(CANDO_PLUG_RECEIVE_VST_EVENTS.equals(feature))
-         return CANDO_YES;
-     if(CANDO_PLUG_RECEIVE_VST_MIDI_EVENT.equals(feature))
-         return CANDO_YES;
-      if(CANDO_PLUG_RECEIVE_VST_TIME_INFO.equals(feature))
-          return CANDO_YES;
-   //   if(CANDO_PLUG_MIDI_PROGRAM_NAMES.equals(feature))
-    //      return CANDO_YES;
-      if(CANDO_PLUG_SEND_VST_EVENTS.equals(feature))
-          return CANDO_YES;
-      if(CANDO_PLUG_SEND_VST_MIDI_EVENT.equals(feature))
-          return CANDO_YES;
-     return CANDO_NO;
- }
+
+    public int getPlugCategory(){
+	//      return PLUG_CATEG_UNKNOWN;
+	//      return PLUG_CATEG_EFFECT;
+	//      return PLUG_CATEG_GENERATOR;
+	return PLUG_CATEG_SYNTH;
+    }
+
+    public int canDo(String feature){
+	//log("harms synth cando: "+feature+".");
+	if(CANDO_PLUG_RECEIVE_VST_EVENTS.equals(feature))
+	    return CANDO_YES;
+	if(CANDO_PLUG_RECEIVE_VST_MIDI_EVENT.equals(feature))
+	    return CANDO_YES;
+	if(CANDO_PLUG_RECEIVE_VST_TIME_INFO.equals(feature))
+	    return CANDO_YES;
+	//   if(CANDO_PLUG_MIDI_PROGRAM_NAMES.equals(feature))
+	//      return CANDO_YES;
+	if(CANDO_PLUG_SEND_VST_EVENTS.equals(feature))
+	    return CANDO_YES;
+	if(CANDO_PLUG_SEND_VST_MIDI_EVENT.equals(feature))
+	    return CANDO_YES;
+	return CANDO_NO;
+    }
 
 
     public String getProductString()
@@ -274,9 +271,9 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	// TODO: ignored
     }
 
-    
- 
-   
+
+
+
 
     // Generate / Process the sound!
     public void processReplacing(float[][] inputs, float[][] outputs, int sampleFrames)
@@ -306,7 +303,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	    return data[0].length;
 	}
     }
-    
+
 
 
     public final int setChunk(byte[] data, int byteSize, boolean isPreset)
@@ -328,15 +325,15 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 		getMidiRowCollection().updateRow(row);
 	    }
 	    updateGUI();
-	    
+
 	} catch (Exception e)
 	{
 	    UIUtils.showAlert("Error loading saved configuration from DAW: " + e.getMessage() + " " + e.getStackTrace() );
 	}
 	return 0;
     }
-    
-    
+
+
     protected void updateGUI()
     {
 	// only access gui elemts if the gui was fully initialized
@@ -359,96 +356,127 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	}
 
     }
-    
-   
-  
 
-    private List<VSTEvent> eventsToDeduplicate;
-    public void processMidiFromRow(VSTEvents events, MidiRow row)
+
+
+    public static class VSTEventWithCategory
     {
-	if (!DO_CHAINING)
+	public VSTEvent getEvent()
 	{
-	    eventsToDeduplicate.addAll(VstUtils.convertVSTEventsToList(events));
+	    return e;
+	}
+	public boolean isPassthrough()
+	{
+	    return isPassthrough;
+	}
+	public boolean isRemoval()
+	{
+	    return isRemoval;
+	}
+	private VSTEvent e;
+	private boolean isRemoval;
+	private boolean isPassthrough;
+	private VSTEventWithCategory(){}
+	public VSTEventWithCategory(VSTEvent e, boolean isNotPassthrough, boolean isRemoval) {
+	    this.e = e;
+	    this.isPassthrough = !isNotPassthrough;
+	    this.isRemoval = isRemoval;
+	}
+    }
 
-	    //Send data right out to host
-            //this.sendVstEventsToHost(events);
+    private List<VSTEventWithCategory> events; //Events created by a MidiRow
+    //private List<VSTEvent> forRemovalEvents; //Events that at least one MidiRow has defined as shouldn't go through if exists in passive set
+    public void processMidiFromRow(List<VSTEventWithCategory> eventsForHost, MidiRow row)
+    {
+	if (isProcessingEvents)
+	{
+	    this.events.addAll(eventsForHost);
+	    //this.forRemovalEvents.addAll(VstUtils.convertVSTEventsToList(eventsToHideFromHost));
 	}
 	else
 	{
-	    //Send data to next item in the chain (if exists)
-	    MidiRow successorRow = midiRows.getSuccessorToThisMidiRow(row);
-	    if (successorRow != null)
-	    {
-		if (successorRow.getEnabled())
-		{
-                    //Send to next row
-                    successorRow.processEvents(events);
-		}
-		else
-		{
-		    processMidiFromRow(events, successorRow); //Recurse to next MidiRow
-		}
-	    }
-	    else
-	    {
-		//Finally, send MIDI to host
-		this.sendVstEventsToHost(events);
-	    }
+	    //This is for when a MidiRow is generating MIDI irrespective of processEvents in this class
+	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(eventsForHost)); //Granted, wouldn't expect any removals here
 	}
     }
- 
 
+
+    private boolean isProcessingEvents;
     // process MIDI
-    public int processEvents(VSTEvents events)
+    public int processEvents(VSTEvents inputEvents)
     {
-	//TODO process this through "MidiRow" interface objects 
-	
-	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
+	isProcessingEvents = true;
+
+	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(inputEvents);
 	if (gui != null) 
 	{
-	  
 	    VstUtils.out("midiRows size is " + this.midiRows.size());
-	    
+
 	    if ((midiRows.size() == 0)||(midiRows.areAllRowsDisabled()))
 	    {
 		//Default to MIDI THRU on when no rows present...
-		this.sendVstEventsToHost(events);
+		this.sendVstEventsToHost(inputEvents);
 	    }
 
-	    if (!DO_CHAINING) //Go through all rows one by one and process them manually
+
+	    this.events.clear();
+	    for (int i = 0; i < this.midiRows.size(); i++)
 	    {
-		this.eventsToDeduplicate.clear();
-		for (int i = 0; i < this.midiRows.size(); i++)
+		MidiRow row = this.midiRows.getRow(i);
+		if (row.getEnabled())
 		{
-		    MidiRow row = this.midiRows.getRow(i);
-		    if (row.getEnabled())
+		    row.processEvents(inputEvents);
+		}
+	    }
+
+
+	    //remove 'removal' events
+	    List<VSTEventWithCategory> removalList = new ArrayList<VSTEventWithCategory>();
+	    for (int i = 0; i < this.events.size(); i++) //Used as the 'remove from' list
+	    {
+		for (int j = 0; j < this.events.size(); j++) //Used as the 'removal' list
+		{
+		    if (events.get(i).isPassthrough()) //Only remove items that are passthrough items
 		    {
-                            row.processEvents(events);
+			if (events.get(j).isRemoval())
+			{
+			    if (VstUtils.eventsMatch(events.get(i).getEvent(), events.get(j).getEvent()))
+			    {
+				//OK so basically REMOVE any PASSTHROUGH messages that match with any messages that
+				//were flagged by at least one MIDIROW for REMOVAL
+				removalList.add(events.get(i));
+			    }
+			}
 		    }
 		}
-
-		//DEDUPE NOW
-		Set<VSTEvent> uniqueSet = new LinkedHashSet<>(eventsToDeduplicate); //This should do the dedupe
-		List<VSTEvent> uniqueEvents = new ArrayList<VSTEvent>();
-		uniqueEvents.addAll(uniqueSet);
-		this.sendVstEventsToHost(VstUtils.convertToVSTEvents(uniqueEvents));
 	    }
-	    else //Doing chaining...
+	    for (int i = 0; i < removalList.size(); i++)
 	    {
-		//Just get first row to process, chaining will take care of any additional rows
-		if (midiRows.size() > 0)
+		try
 		{
-		    midiRows.getRow(0).processEvents(events);
+		    while (this.events.remove(removalList.get(i))) //ensures all instances get removed, if multiple 'twins' were to exist
+		    {
+		    }
 		}
+		catch (Exception e){}
 	    }
+
+	    //OK now we have a filtered list, now just need to deduplicate it
+	    //DEDUPE NOW
+	    Set<VSTEventWithCategory> uniqueSet = new LinkedHashSet<>(this.events); //This should do the dedupe
+	    List<VSTEventWithCategory> uniqueEvents = new ArrayList<VSTEventWithCategory>();
+	    uniqueEvents.addAll(uniqueSet);
+	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(uniqueEvents)); //Finally we send all non-removed and non-'removal' items to the Host
+
 	}
 
+	isProcessingEvents = false;
 	return 0;
     }
 
-   
 
-  
+
+
 
 
 }

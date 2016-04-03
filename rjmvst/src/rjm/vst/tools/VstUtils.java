@@ -24,6 +24,7 @@ import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
 import rjm.vst.javafx.UIUtils;
+import rjm.vst.midi.polytool.PolyTool.VSTEventWithCategory;
 
 public class VstUtils {
     
@@ -133,6 +134,21 @@ public class VstUtils {
 	 out(stackTrace);
      }
      
+     public static boolean eventsMatch(VSTEvent event, VSTEvent event2)
+     {
+	 byte[] msg_data = ((VSTMidiEvent)event).getData();
+	 byte[] msg_data2 = ((VSTMidiEvent)event2).getData();
+	 
+	 if (msg_data == msg_data2)
+	 {
+	     return true;
+	 }
+	 else
+	 {
+	     return false;
+	 }
+     }
+     
      
      public static VSTEvent convertMidiChannel(VSTEvent inputEvent, int inputChannel, int outputChannel)
      {
@@ -143,6 +159,29 @@ public class VstUtils {
 	 newevents = convertMidiChannel(newevents, inputChannel, outputChannel);
 	 VstUtils.out("New events NOW has " + newevents.getEvents().length);
 	 return newevents.getEvents()[0];
+     }
+     
+     public static VSTEvents convertToVSTEvents2(List<VSTEventWithCategory> events)
+     {
+	 List<VSTEvent> outEvents = new ArrayList<VSTEvent>();
+	 for (int i = 0; i < events.size(); i++)
+	 {
+	     outEvents.add(events.get(i).getEvent());
+	 }
+	 return convertToVSTEvents(outEvents);
+     }
+     
+     public static VSTEvents convertOnlyNonRemovalsToVSTEvents(List<VSTEventWithCategory> events)
+     {
+	 List<VSTEvent> outEvents = new ArrayList<VSTEvent>();
+	 for (int i = 0; i < events.size(); i++)
+	 {
+	     if (!events.get(i).isRemoval())
+	     {
+                     outEvents.add(events.get(i).getEvent());
+	     }
+	 }
+	 return convertToVSTEvents(outEvents);
      }
 
      public static VSTEvents convertMidiChannel(VSTEvents inputEvents, int inputChannel, int outputChannel)
