@@ -82,7 +82,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	VstUtils.out("LOADING");
 	VstUtils.out("Host can receive vst midi?: " + this.canHostDo(CANDO_HOST_RECEIVE_VST_MIDI_EVENT));
 
-	events = new ArrayList<VSTEventWithCategory>(); //Events created by a MidiRow
+	events = new ArrayList<TypedVSTEvent>(); //Events created by a MidiRow
     }
 
     public void resume()
@@ -359,44 +359,44 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
 
 
-    public static class VSTEventWithCategory
+    public static class TypedVSTEvent
     {
+	public static int NEW = 1;
+	public static int PASSTHROUGH = 2;
+	public static int REMOVAL = 3;
+
 	public VSTEvent getEvent()
 	{
 	    return e;
 	}
 	public boolean isPassthrough()
 	{
-	    return isPassthrough;
+	    return (type == PASSTHROUGH);
 	}
 	public boolean isRemoval()
 	{
-	    return isRemoval;
+	    return (type == REMOVAL);
 	}
 	private VSTEvent e;
-	private boolean isRemoval;
-	private boolean isPassthrough;
-	private VSTEventWithCategory(){}
-	public VSTEventWithCategory(VSTEvent e, boolean isNotPassthrough, boolean isRemoval) {
+	private int type;
+	
+	public TypedVSTEvent(VSTEvent e, int type) {
 	    this.e = e;
-	    this.isPassthrough = !isNotPassthrough;
-	    this.isRemoval = isRemoval;
+	    this.type = type;
 	}
     }
 
-    private List<VSTEventWithCategory> events; //Events created by a MidiRow
-    //private List<VSTEvent> forRemovalEvents; //Events that at least one MidiRow has defined as shouldn't go through if exists in passive set
-    public void processMidiFromRow(List<VSTEventWithCategory> eventsForHost, MidiRow row)
+    private List<TypedVSTEvent> events; //Events created by a MidiRow
+    public void processMidiFromRow(List<TypedVSTEvent> eventsForHost, MidiRow row)
     {
 	if (isProcessingEvents)
 	{
 	    this.events.addAll(eventsForHost);
-	    //this.forRemovalEvents.addAll(VstUtils.convertVSTEventsToList(eventsToHideFromHost));
 	}
 	else
 	{
-	    //This is for when a MidiRow is generating MIDI irrespective of processEvents in this class
-	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(eventsForHost)); //Granted, wouldn't expect any removals here
+	    //This is for when a MidiRow is generating MIDI that is NOT downstream of the 'processEvents' function
+	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(eventsForHost)); //Granted, I wouldn't expect any removals to show up here
 	}
     }
 
@@ -406,7 +406,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
     public int processEvents(VSTEvents inputEvents)
     {
 	isProcessingEvents = true;
-
+	
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(inputEvents);
 	if (gui != null) 
 	{
@@ -431,7 +431,7 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
 
 	    //remove 'removal' events
-	    List<VSTEventWithCategory> removalList = new ArrayList<VSTEventWithCategory>();
+	    List<TypedVSTEvent> removalList = new ArrayList<TypedVSTEvent>();
 	    for (int i = 0; i < this.events.size(); i++) //Used as the 'remove from' list
 	    {
 		for (int j = 0; j < this.events.size(); j++) //Used as the 'removal' list
@@ -463,8 +463,8 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 
 	    //OK now we have a filtered list, now just need to deduplicate it
 	    //DEDUPE NOW
-	    Set<VSTEventWithCategory> uniqueSet = new LinkedHashSet<>(this.events); //This should do the dedupe
-	    List<VSTEventWithCategory> uniqueEvents = new ArrayList<VSTEventWithCategory>();
+	    Set<TypedVSTEvent> uniqueSet = new LinkedHashSet<>(this.events); //This should do the dedupe
+	    List<TypedVSTEvent> uniqueEvents = new ArrayList<TypedVSTEvent>();
 	    uniqueEvents.addAll(uniqueSet);
 	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(uniqueEvents)); //Finally we send all non-removed and non-'removal' items to the Host
 

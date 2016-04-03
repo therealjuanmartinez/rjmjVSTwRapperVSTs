@@ -8,6 +8,8 @@ import java.util.List;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
+import com.sun.scenario.effect.light.Light.Type;
+
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
@@ -24,7 +26,7 @@ import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
 import rjm.midi.tools.MidiUtils;
 import rjm.midi.tools.Note;
-import rjm.vst.midi.polytool.PolyTool.VSTEventWithCategory;
+import rjm.vst.midi.polytool.PolyTool.TypedVSTEvent;
 import rjm.vst.tools.VstUtils;
 
 public class PolyRow implements Serializable, MidiRow {
@@ -61,6 +63,7 @@ public class PolyRow implements Serializable, MidiRow {
 
     transient PolyTool p;
     transient Button learnBtn;
+    private boolean letNotesPlayThrough;
     public PolyRow(PolyTool p)
     {
 	note = null;
@@ -162,7 +165,6 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
 
-    private boolean letNotesPlayThrough;
 
 
  
@@ -296,15 +298,15 @@ public class PolyRow implements Serializable, MidiRow {
 
 
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
-	List<VSTEventWithCategory> newEvents = new ArrayList<VSTEventWithCategory>();
-	List<VSTEventWithCategory> newOrigEvents = new ArrayList<VSTEventWithCategory>();
+	List<TypedVSTEvent> newEvents = new ArrayList<TypedVSTEvent>();
+	List<TypedVSTEvent> newOrigEvents = new ArrayList<TypedVSTEvent>();
 
 	VstUtils.out(getDebugString());
 	VstUtils.out("Here we are");
 	if (this.isGoodForProcessing()) //Instantiated and has usable values
 	{
 	    //Get new CC events that need to be added to output
-	    List<VSTEventWithCategory> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents);
+	    List<TypedVSTEvent> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents);
 	    VstUtils.out("e has " + justNewCCEvents.size());
 
 	    //VstUtils.out("****************BELOW SHOULD ONLY BE CC EVENTS:");
@@ -322,7 +324,7 @@ public class PolyRow implements Serializable, MidiRow {
 	    if (!this.isUseAllKeys())
 	    {
 		//Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned if play notes checkbox allows
-		List<VSTEventWithCategory> set = stripMessagesBasedOnNoteNum(origEvents);
+		List<TypedVSTEvent> set = stripMessagesBasedOnNoteNum(origEvents);
 		newOrigEvents = set;
 	    }
 	    else
@@ -343,9 +345,9 @@ public class PolyRow implements Serializable, MidiRow {
 
 
 
-    private List<VSTEventWithCategory> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events)//, int inputChannel, int outputChannel, boolean allowNotesToPlayThrough)
+    private List<TypedVSTEvent> stripPolyMessagesAndUpdateNoteOnOffChannel(List<VSTEvent> events)
     {
-	List<VSTEventWithCategory> cleanedEvents = new ArrayList<VSTEventWithCategory>();
+	List<TypedVSTEvent> cleanedEvents = new ArrayList<TypedVSTEvent>();
 	VstUtils.out("Considering " + events.size() + " to clean");
 
 	for (int i = 0; i < events.size(); i++)
@@ -365,7 +367,7 @@ public class PolyRow implements Serializable, MidiRow {
 		if (msg_channel != inputChannel)//Incoming message not on captured input channel
 		{
 		    //Let it through, since it's not on the channel we're capturing
-		    cleanedEvents.add(new VSTEventWithCategory(e, false, false)); 
+		    cleanedEvents.add(new TypedVSTEvent(e, TypedVSTEvent.PASSTHROUGH)); 
 		}
 		else //matches input channel we're capturing
 		{
@@ -373,17 +375,17 @@ public class PolyRow implements Serializable, MidiRow {
 		    {
 			if ((status == ShortMessage.NOTE_ON) || (status == ShortMessage.NOTE_OFF))
 			{
-			    cleanedEvents.add(new VSTEventWithCategory(e, false, true));  //remove original note-on
+			    cleanedEvents.add(new TypedVSTEvent(e, TypedVSTEvent.REMOVAL));  //remove original note-on
 			    //Update channel for this note on/off
 			    if (letNotesPlayThrough) //Only send if note play-through is enabled
 			    {
-				cleanedEvents.add(new VSTEventWithCategory(VstUtils.convertMidiChannel(e, inputChannel, outputChannel), true, false)); 
+				cleanedEvents.add(new TypedVSTEvent(VstUtils.convertMidiChannel(e, inputChannel, outputChannel), TypedVSTEvent.NEW)); 
 			    }
 			}
 			else //Passing through messages as is, since they are not relevant to this logic 
-			    //and we don't want to drop them by default
+			    //and we don't want to drop them (here) by default
 			{
-                             cleanedEvents.add(new VSTEventWithCategory(e, false, false));  //passthrough event
+                             cleanedEvents.add(new TypedVSTEvent(e, TypedVSTEvent.PASSTHROUGH));  //passthrough event
 			}
 		    }
 		}
@@ -394,9 +396,9 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
 
-    private List<VSTEventWithCategory>  stripMessagesBasedOnNoteNum(List<VSTEvent> events)
+    private List<TypedVSTEvent>  stripMessagesBasedOnNoteNum(List<VSTEvent> events)
     {
-	List<VSTEventWithCategory> returnEvents = new ArrayList<VSTEventWithCategory>();
+	List<TypedVSTEvent> returnEvents = new ArrayList<TypedVSTEvent>();
 
 	VstUtils.out("Considering " + events.size() + " to clean");
 
@@ -422,6 +424,12 @@ public class PolyRow implements Serializable, MidiRow {
 		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 		int noteNum = ctrl_index;
 
+	        if ((noteNum == note.getMidiNoteNumber()) && ((status == ShortMessage.NOTE_ON)||(status == ShortMessage.NOTE_OFF)))
+	        {
+	            //Remove all original Note On/Off messages (this COULD be 
+		     returnEvents.add(new TypedVSTEvent(e, TypedVSTEvent.REMOVAL)); //Removal of note on/off message on original channel
+	        }
+
 		if 
 		(
 			((letNotesPlayThrough) || !(noteNum == note.getMidiNoteNumber()))
@@ -435,17 +443,16 @@ public class PolyRow implements Serializable, MidiRow {
                         {
 			    //Generally this will be NOTE ON/OFF messages; just need to convert to proper output channel
 
-			    returnEvents.add(new VSTEventWithCategory(e, false, true)); //Removal of note on/off message on original channel
 			    if (letNotesPlayThrough)
 			    {
 				//Only send this message if note playthrough is allowed
-                                    returnEvents.add(new VSTEventWithCategory(VstUtils.convertMidiChannel(e, getInputChannel(), getOutputChannel()), true, false));
+                                    returnEvents.add(new TypedVSTEvent(VstUtils.convertMidiChannel(e, getInputChannel(), getOutputChannel()), TypedVSTEvent.NEW));
 			    }
                         }
                         else if
 			(!(noteNum == note.getMidiNoteNumber()))
                         {
-                            returnEvents.add(new VSTEventWithCategory(e, false, false)); //passthrough
+                            returnEvents.add(new TypedVSTEvent(e, TypedVSTEvent.PASSTHROUGH)); //passthrough
                         }
 		}
 	    }
@@ -458,9 +465,9 @@ public class PolyRow implements Serializable, MidiRow {
     
 
 
-    private List<VSTEventWithCategory> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev)
+    private List<TypedVSTEvent> convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(List<VSTEvent> ev)
     {
-	List<VSTEventWithCategory> newEvs = new ArrayList<VSTEventWithCategory>();
+	List<TypedVSTEvent> newEvs = new ArrayList<TypedVSTEvent>();
 
 	//out("Got " + ev.size() + " events to consider");
 
@@ -513,7 +520,7 @@ public class PolyRow implements Serializable, MidiRow {
 
 		    if ((status == ShortMessage.POLY_PRESSURE)&&(noteMatchesOrUsingAllKeys))
 		    {
-			newEvs.add(new VSTEventWithCategory(e, false, true)); //Adding this POLY event as a removal item so no other rows pass them through
+			newEvs.add(new TypedVSTEvent(e, TypedVSTEvent.REMOVAL)); //Adding this POLY event as a removal item so no other rows pass them through
 
 			//VstUtils.out("Found poly value " + ctrl_value);
 			//First change the value to adhere to the max/min supplied to this funciton
@@ -558,7 +565,7 @@ public class PolyRow implements Serializable, MidiRow {
 			    VSTEvent event = new VSTEvent();
 			    event = newEvent;
 			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(new VSTEventWithCategory(event, true, false));
+			    newEvs.add(new TypedVSTEvent(event, TypedVSTEvent.NEW));
 			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
 			} catch (InvalidMidiDataException e1)
 			{
@@ -590,7 +597,7 @@ public class PolyRow implements Serializable, MidiRow {
 			    VSTEvent event = new VSTEvent();
 			    event = newEvent;
 			    event.setType(VSTEvent.VST_EVENT_MIDI_TYPE); //Apparently this is needed...
-			    newEvs.add(new VSTEventWithCategory(event, true, false));
+			    newEvs.add(new TypedVSTEvent(event, TypedVSTEvent.NEW));
 			    //out("Added new event to return list, which now has " + newEvs.size() + " elements");
 			} catch (InvalidMidiDataException e1)
 			{

@@ -24,7 +24,7 @@ import jvst.wrapper.valueobjects.VSTEvent;
 import jvst.wrapper.valueobjects.VSTEvents;
 import jvst.wrapper.valueobjects.VSTMidiEvent;
 import rjm.vst.javafx.UIUtils;
-import rjm.vst.midi.polytool.PolyTool.VSTEventWithCategory;
+import rjm.vst.midi.polytool.PolyTool.TypedVSTEvent;
 
 public class VstUtils {
     
@@ -161,7 +161,7 @@ public class VstUtils {
 	 return newevents.getEvents()[0];
      }
      
-     public static VSTEvents convertToVSTEvents2(List<VSTEventWithCategory> events)
+     public static VSTEvents convertToVSTEvents2(List<TypedVSTEvent> events)
      {
 	 List<VSTEvent> outEvents = new ArrayList<VSTEvent>();
 	 for (int i = 0; i < events.size(); i++)
@@ -171,7 +171,7 @@ public class VstUtils {
 	 return convertToVSTEvents(outEvents);
      }
      
-     public static VSTEvents convertOnlyNonRemovalsToVSTEvents(List<VSTEventWithCategory> events)
+     public static VSTEvents convertOnlyNonRemovalsToVSTEvents(List<TypedVSTEvent> events)
      {
 	 List<VSTEvent> outEvents = new ArrayList<VSTEvent>();
 	 for (int i = 0; i < events.size(); i++)
