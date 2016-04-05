@@ -79,7 +79,7 @@ public class PolyRow implements Serializable, MidiRow {
 
 	doAveraging = false;
 	latestVals = new ArrayList<DatedMidiVal>();
-	letNotesPlayThrough = true;
+	letNotesPlayThrough = false;
 	this.p = p;
     }
 
@@ -101,7 +101,7 @@ public class PolyRow implements Serializable, MidiRow {
     }
 
 
-    public void submitRealtimeValue(int val)
+    private void submitRealtimeValue(int val) //This is used for averaging and could probably use a better name
     {
 	try
 	{
@@ -118,7 +118,7 @@ public class PolyRow implements Serializable, MidiRow {
 	}
     }
 
-    private void freshenValsArray()
+    private void freshenValsArray() //Involves Averaging; make sure we're not using values that are more than X millis old
     {
 	//Make sure values are less than X milliseconds old
 	List<DatedMidiVal> oldVals = new ArrayList<DatedMidiVal>();
@@ -291,15 +291,11 @@ public class PolyRow implements Serializable, MidiRow {
     // process MIDI
     public void processEvents(VSTEvents events)
     {
-	//TODO process this through "MidiRow" interface objects 
-	
 	if (doLearnButton) //"Learn" the note from Learn button
 	  { events = doLearnButton(events, this.learnBtn); }
 
-
 	List<VSTEvent> origEvents = VstUtils.cloneVSTEventsToList(events);
 	List<TypedVSTEvent> newEvents = new ArrayList<TypedVSTEvent>();
-	List<TypedVSTEvent> newOrigEvents = new ArrayList<TypedVSTEvent>();
 
 	VstUtils.out(getDebugString());
 	VstUtils.out("Here we are");
@@ -313,28 +309,21 @@ public class PolyRow implements Serializable, MidiRow {
 	    newEvents.addAll(justNewCCEvents); //Add new events to output
 	    //VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents(newEvents));
 	    //VstUtils.out("****************END OF ONLY CC EVENTS");
+	    
+	    if (!this.isUseAllKeys())
+	    {
+		//Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned if play notes checkbox allows
+		newEvents.addAll(stripMessagesBasedOnNoteNum(origEvents));
+	    }
+	    else
+	    {
+		newEvents.addAll(stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents));
+	    }
 	}
 	else
 	{
 	    VstUtils.out("Row was NOT good to go");
 	}
-
-	if (this.isGoodForProcessing()) //Instantiated and has usable values
-	{
-	    if (!this.isUseAllKeys())
-	    {
-		//Finally, after all rows, strip outgoing events of all incoming noteon/off events that were actioned if play notes checkbox allows
-		List<TypedVSTEvent> set = stripMessagesBasedOnNoteNum(origEvents);
-		newOrigEvents = set;
-	    }
-	    else
-	    {
-		newOrigEvents = stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents);
-	    }
-	}
-
-	//FINALLY now we just make sure the CC events are on the top of the collection and then lets ship it off
-	newEvents.addAll(newOrigEvents);
 
 	VstUtils.out("******************NEW EVENTS:");
 	VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents2(newEvents));
@@ -424,9 +413,10 @@ public class PolyRow implements Serializable, MidiRow {
 		int status = MidiUtils.getStatusWithoutChannelByteFromMidiByteArray(msg_data);
 		int noteNum = ctrl_index;
 
-	        if ((noteNum == note.getMidiNoteNumber()) && ((status == ShortMessage.NOTE_ON)||(status == ShortMessage.NOTE_OFF)))
+	        if ((noteNum == note.getMidiNoteNumber()) && ((status == ShortMessage.NOTE_ON)||(status == ShortMessage.NOTE_OFF))
+	        	&& (msg_channel == inputChannel))
 	        {
-	            //Remove all original Note On/Off messages (this COULD be 
+	            //Remove all original Note On/Off messages 
 		     returnEvents.add(new TypedVSTEvent(e, TypedVSTEvent.REMOVAL)); //Removal of note on/off message on original channel
 	        }
 
@@ -626,7 +616,6 @@ public class PolyRow implements Serializable, MidiRow {
 
 	//int numWidth = 50; //width of text fields that contain numbers
 
-	//TODO - Fix bug where this text field doesn't seem to get saved/recalled
 	TextField tfRowName = new TextField();
 	if (getName() != null)
 	{ tfRowName.setText(getName()); }

@@ -70,20 +70,17 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
 
 	GridPane rowGrid = new GridPane();
         Button btnNewRow = new Button();
-        btnNewRow.setText("Add row");
-        btnNewRow.setOnAction(e -> this.HandleNewRowButton()); 
+        btnNewRow.setText("Add PolyRow");
+        btnNewRow.setOnAction(e -> this.HandleNewPolyRowButton()); 
         int idx = 0;
         rowGrid.add(btnNewRow,idx,0); idx++;
 
-        /*
         Button b = new Button();
-        b.setText("Add row");
-        b.setOnAction(e -> this.HandleNewRowButton()); 
+        b.setText("Add Range Row");
+        b.setOnAction(e -> this.HandleNewRangeRowButton()); 
         rowGrid.add(b,idx,0); idx++;
-        */
 
         parentBox.getChildren().add(rowGrid);
-        //parentBox.getChildren().add(btnNewRow);
         parentBox.getChildren().add(rowBox);
 
         root.getChildren().add(parentBox);
@@ -98,13 +95,33 @@ public class PolyToolGui extends VSTPluginGUIAdapter implements ChangeListener {
     
     
     
-    private void HandleNewRowButton()
+    private void HandleNewPolyRowButton()
     {
 	VstUtils.out("Attempting to add row to collection");
 	int rowId = -1;
 	try
 	{
             MidiRow row = new PolyRow((PolyTool)plugin);
+	    rowId = ((PolyTool)plugin).getMidiRowCollection().add(row);
+
+            VstUtils.out("row ID is " + rowId);
+            addGuiRow(row);
+	}
+	catch (Exception e)
+	{
+	    VstUtils.outStackTrace(e);
+	}
+	//float rows = this.pPlugin.getParameter(PolyTool.PARAM_ID_ROWS);
+	//this.pPlugin.setParameter(PolyTool.PARAM_ID_ROWS, rows + 1);
+    }
+    
+    private void HandleNewRangeRowButton()
+    {
+	VstUtils.out("Attempting to add row to collection");
+	int rowId = -1;
+	try
+	{
+            MidiRow row = new RangeRow((PolyTool)plugin);
 	    rowId = ((PolyTool)plugin).getMidiRowCollection().add(row);
 
             VstUtils.out("row ID is " + rowId);

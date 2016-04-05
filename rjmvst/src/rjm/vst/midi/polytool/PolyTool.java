@@ -380,6 +380,11 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	private VSTEvent e;
 	private int type;
 	
+	public int getType()
+	{
+	    return type;
+	}
+	
 	public TypedVSTEvent(VSTEvent e, int type) {
 	    this.e = e;
 	    this.type = type;
@@ -412,14 +417,19 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	{
 	    VstUtils.out("midiRows size is " + this.midiRows.size());
 
+	    boolean done = false;
 	    if ((midiRows.size() == 0)||(midiRows.areAllRowsDisabled()))
 	    {
 		//Default to MIDI THRU on when no rows present...
 		this.sendVstEventsToHost(inputEvents);
+		done = true;
 	    }
 
-
 	    this.events.clear();
+	    
+	    if (done){return 0;}
+
+
 	    for (int i = 0; i < this.midiRows.size(); i++)
 	    {
 		MidiRow row = this.midiRows.getRow(i);
@@ -428,7 +438,6 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 		    row.processEvents(inputEvents);
 		}
 	    }
-
 
 	    //remove 'removal' events
 	    List<TypedVSTEvent> removalList = new ArrayList<TypedVSTEvent>();
@@ -466,7 +475,20 @@ public class PolyTool extends VSTPluginAdapter implements Serializable {
 	    Set<TypedVSTEvent> uniqueSet = new LinkedHashSet<>(this.events); //This should do the dedupe
 	    List<TypedVSTEvent> uniqueEvents = new ArrayList<TypedVSTEvent>();
 	    uniqueEvents.addAll(uniqueSet);
-	    this.sendVstEventsToHost(VstUtils.convertOnlyNonRemovalsToVSTEvents(uniqueEvents)); //Finally we send all non-removed and non-'removal' items to the Host
+	    
+	    
+		VstUtils.out("******************NEW EVENTS:");
+		VstUtils.outputTypedVstEventsForDebugPurposes(uniqueEvents);
+		VstUtils.out("******************END OF NEW EVENTS:");
+		
+		VSTEvents finalOutput = VstUtils.convertOnlyNonRemovalsToVSTEvents(uniqueEvents);
+		
+		VstUtils.out("******************NEW FINAL EVENTS:");
+		VstUtils.outputVstMidiEventsForDebugPurposes(finalOutput);
+		VstUtils.out("******************END OF NEW FINAL EVENTS:");
+		
+
+	    this.sendVstEventsToHost(finalOutput); //Finally we send all non-removed and non-'removal' items to the Host
 
 	}
 

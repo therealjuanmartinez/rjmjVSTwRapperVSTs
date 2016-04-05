@@ -127,11 +127,16 @@ public class VstUtils {
      
      public static void outStackTrace(Exception e)
      {
+	 out(getStackTrace(e));
+     }
+     
+     
+     public static String getStackTrace(Exception e)
+     {
 	 StringWriter sw = new StringWriter();
 	 PrintWriter pw = new PrintWriter(sw);
 	 e.printStackTrace(pw);
-	 String stackTrace = sw.toString(); // stack trace as a string	
-	 out(stackTrace);
+	 return sw.toString();
      }
      
      public static boolean eventsMatch(VSTEvent event, VSTEvent event2)
@@ -230,9 +235,11 @@ public class VstUtils {
  		    } catch (InvalidMidiDataException e1)
  		    {
  			// TODO Auto-generated catch block
-                         //out(e1.getStackTrace().toString());
+ 			VstUtils.outStackTrace(e1);
  		    }
  		}
+                else //Ignore i.e. simply pass through the message without modification
+                { outputEvents.add(e); }
 
  	    }
  	    else //Ignore i.e. simply pass through the message without modification
@@ -290,7 +297,66 @@ public class VstUtils {
 	}
     }
     
-    
+    public static void outputTypedVstEventsForDebugPurposes(List<TypedVSTEvent> events)
+    {
+	
+	VSTEvents ev = VstUtils.convertToVSTEvents2(events);
+	
+	for (int i = 0; i < ev.getEvents().length; i++)
+	{
+	    VSTEvent e = ev.getEvents()[i];
+
+	    if( e.getType() == VSTEvent.VST_EVENT_MIDI_TYPE ) 
+	    {
+		byte[] msg_data = ((VSTMidiEvent)e).getData();
+
+		int ctrl_index, ctrl_value, msg_status, msg_channel;
+		msg_status = ( msg_data[ 0 ] & 0xF0 ) >> 4;
+		if( msg_status == 0xF ) {
+		    /* Ignore system messages.*/
+		    //return;
+		}
+		msg_channel = ( msg_data[ 0 ] & 0xF ) + 1;
+
+		ctrl_index = msg_data[ 1 ] & 0x7F;
+		ctrl_value = msg_data[ 2 ] & 0x7F;
+
+		int status = (int) (e.getData()[0] & 0xFF) - msg_channel + 1; //different but related to msg_status
+
+		TypedVSTEvent te = events.get(i);
+
+		///ShortMessage s = new ShortMessage();
+
+		out("\n");
+		Class<ShortMessage> c = ShortMessage.class;
+		for (java.lang.reflect.Field f : c.getDeclaredFields()) {
+		    int mod = f.getModifiers();
+		    if (Modifier.isStatic(mod) && Modifier.isPublic(mod) && Modifier.isFinal(mod)) {
+			try {
+			    //System.out.printf("%s = %d%n", f.getName(), f.get(null));
+			    Integer code = (Integer)f.get(null);
+			    if (status == code.intValue())
+			    {
+				//Print the type of message we've received
+				out(String.format("%s = %d", f.getName(), f.get(null)));
+			    }
+			} catch (IllegalAccessException e2) {
+			    out("ERROR doing the comparison thing");
+			    e2.printStackTrace();
+			}
+		    }
+		}
+		out("Status for incoming message is " + status + " type is " + te.getType());
+		out("Channel: " + msg_channel);
+		out("Status: " + msg_status);
+		out("Value: " + ctrl_value);
+		out("Index: " + ctrl_index);
+	    }
+	    else {
+		out("Not midi?");}
+	    }
+    } 
+
 
     public static void outputVstMidiEventsForDebugPurposes(VSTEvents ev)
     {

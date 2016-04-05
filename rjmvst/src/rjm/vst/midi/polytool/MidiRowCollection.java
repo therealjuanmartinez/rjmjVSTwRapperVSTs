@@ -3,6 +3,8 @@ package rjm.vst.midi.polytool;
 import java.io.Serializable;
 import java.util.ArrayList;
 
+import rjm.vst.tools.VstUtils;
+
 public class MidiRowCollection implements Serializable {
 	private static final long serialVersionUID = 1769311394643385592L;
 	private ArrayList<MidiRow> rows;
@@ -108,9 +110,11 @@ public class MidiRowCollection implements Serializable {
 		MidiRow row = rows.get(i);
 		if (row.getEnabled())
 		{
+                    VstUtils.out("All rows NOT disabled");
 		    return false;
 		}
 	    }
+            VstUtils.out("All rows disabled");
 	    return true;
 	}
 	

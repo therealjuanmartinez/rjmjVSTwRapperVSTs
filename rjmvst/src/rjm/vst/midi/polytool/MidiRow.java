@@ -12,9 +12,7 @@ public interface MidiRow extends Serializable {
     public boolean getEnabled();
     public int getId();
     public boolean isGoodForProcessing();
-    public void setEnabled(boolean x);
     public void setId(int x);
-    public void submitRealtimeValue(int x);
     public void processEvents(VSTEvents e);
     public void setPlugin(PolyTool p); 
     public GridPane getGuiRow();
