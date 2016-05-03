@@ -252,52 +252,15 @@ public class VstUtils {
     
      }
 
-    public static void out(String message)
-    {
+     public static void out(String message)
+     {
 
-	//This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
+    	 //This function as of right now is a total hack and should only be used for debugging purposes and is known to slightly degrade plugin performance
 
-	if (true) //This prevents this hack of a logging function from running unless manually enabled
-	{ return; }
+    	 LoggerSingleton.log(message);
+     }
 
-	try
-	{
-	    //HACK JMM
-	    //TODO remove this thing
-	    BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
-
-		    new FileOutputStream("c:\\temp\\jwrapper_log.txt", true), "UTF-8"));
-
-	    try
-	    {
-		writer.write(message + "\n");
-		writer.close();
-	    } catch (IOException e)
-	    {
-		try
-		{
-		    writer.write(message + "\n");
-		    writer.close();
-		} catch (IOException e1)
-		{
-		    // TODO Auto-generated catch block
-		    e1.printStackTrace();
-		}
-		// TODO Auto-generated catch block
-		e.printStackTrace();
-	    }
-	} catch (UnsupportedEncodingException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	} catch (FileNotFoundException e)
-	{
-	    // TODO Auto-generated catch block
-	    e.printStackTrace();
-	}
-    }
-    
-    public static void outputTypedVstEventsForDebugPurposes(List<TypedVSTEvent> events)
+     public static void outputTypedVstEventsForDebugPurposes(List<TypedVSTEvent> events)
     {
 	
 	VSTEvents ev = VstUtils.convertToVSTEvents2(events);

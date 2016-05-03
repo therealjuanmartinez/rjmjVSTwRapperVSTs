@@ -186,10 +186,6 @@ public class PolyRow implements Serializable, MidiRow {
 
     public boolean isGoodForProcessing()
     {
-	if (!enabled)
-	{
-	    return false;
-	}
 	if (!this.isUseAllKeys())
 	{
 	    try
@@ -298,8 +294,8 @@ public class PolyRow implements Serializable, MidiRow {
 	List<TypedVSTEvent> newEvents = new ArrayList<TypedVSTEvent>();
 
 	VstUtils.out(getDebugString());
-	VstUtils.out("Here we are");
-	if (this.isGoodForProcessing()) //Instantiated and has usable values
+
+	if ((this.isGoodForProcessing())&&(enabled))//Instantiated and has usable values
 	{
 	    //Get new CC events that need to be added to output
 	    List<TypedVSTEvent> justNewCCEvents = convertPolyAftertouchToCCAndReturnOnlyNewCCEvents(origEvents);
@@ -320,14 +316,17 @@ public class PolyRow implements Serializable, MidiRow {
 		newEvents.addAll(stripPolyMessagesAndUpdateNoteOnOffChannel(origEvents));
 	    }
 	}
-	else
+	else //Pass everything through
 	{
-	    VstUtils.out("Row was NOT good to go");
+	    for (int i = 0; i < origEvents.size(); i++)
+	    {
+		newEvents.add(new TypedVSTEvent(origEvents.get(i), TypedVSTEvent.PASSTHROUGH));
+	    }
 	}
 
-	VstUtils.out("******************NEW EVENTS:");
-	VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents2(newEvents));
-	VstUtils.out("******************END OF NEW EVENTS:");
+	//VstUtils.out("******************NEW EVENTS:");
+	//VstUtils.outputVstMidiEventsForDebugPurposes(VstUtils.convertToVSTEvents2(newEvents));
+	//VstUtils.out("******************END OF NEW EVENTS:");
 
 	p.processMidiFromRow(newEvents, this); //Now shoot those MIDI events back out to parent plugin for further processing and/or chaining
     }
